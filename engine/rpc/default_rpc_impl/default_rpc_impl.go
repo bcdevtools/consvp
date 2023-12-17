@@ -264,6 +264,77 @@ func (rpc *defaultRpcClientImpl) bondedValidatorsViaHTTP() ([]stakingtypes.Valid
 	return validators, nil
 }
 
+func (rpc *defaultRpcClientImpl) ConsensusState() (*enginetypes.RoundState, error) {
+	var resultRoundState *enginetypes.RoundState
+	var err error
+
+	retry := types.DefaultRetryCounterFetchingRpc()
+
+	for retry.Continue() {
+		if rpc.rpcWebsocketClient != nil {
+			resultRoundState, err = rpc.consensusStateViaWebsocket()
+		} else {
+			resultRoundState, err = rpc.consensusStateViaHTTP()
+		}
+		if err == nil {
+			break
+		}
+
+		sleepRetry()
+	}
+
+	return resultRoundState, err
+}
+
+func (rpc *defaultRpcClientImpl) consensusStateViaWebsocket() (*enginetypes.RoundState, error) {
+	if rpc.rpcWebsocketClient == nil {
+		return nil, errors.New("Websocket client is not available")
+	}
+	res, err := rpc.rpcWebsocketClient.ConsensusState(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	var rs enginetypes.RoundState
+	err = json.Unmarshal(res.RoundState, &rs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal RoundState")
+	}
+	return &rs, nil
+}
+
+func (rpc *defaultRpcClientImpl) consensusStateViaHTTP() (*enginetypes.RoundState, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/consensus_state", rpc.endpoint))
+	if err != nil {
+		return nil, errors.Wrap(err, "error request rpc '/consensus_state' endpoint")
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	bz, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading response from rpc '/consensus_state' endpoint")
+	}
+
+	fmt.Println(string(bz))
+	var resContent enginetypes.BaseRpcResponse[enginetypes.RoundStateResponse]
+	err = json.Unmarshal(bz, &resContent)
+	if err != nil {
+		return nil, errors.Wrap(err, "error unmarshal response from rpc '/consensus_state' endpoint")
+	}
+
+	err = resContent.Error.GetError()
+	if err != nil {
+		return nil, err
+	}
+
+	if resContent.Result.RoundState == nil {
+		return nil, errors.New("empty round state information")
+	}
+
+	return resContent.Result.RoundState, nil
+}
+
 // Status returns the status of the RPC server
 func (rpc *defaultRpcClientImpl) Status() (*coretypes.ResultStatus, error) {
 	var resultStatus *coretypes.ResultStatus
@@ -288,6 +359,9 @@ func (rpc *defaultRpcClientImpl) Status() (*coretypes.ResultStatus, error) {
 }
 
 func (rpc *defaultRpcClientImpl) statusViaWebsocket() (*coretypes.ResultStatus, error) {
+	if rpc.rpcWebsocketClient == nil {
+		return nil, errors.New("Websocket client is not available")
+	}
 	return rpc.rpcWebsocketClient.Status(context.Background())
 }
 
@@ -329,6 +403,10 @@ func (rpc *defaultRpcClientImpl) LatestValidators() ([]*tmtypes.Validator, error
 }
 
 func (rpc *defaultRpcClientImpl) latestValidatorsViaWebsocket(height int64) ([]*tmtypes.Validator, error) {
+	if rpc.rpcWebsocketClient == nil {
+		return nil, errors.New("Websocket client is not available")
+	}
+
 	var latestHeight *int64
 	var page int
 	var perPage int

@@ -2,6 +2,7 @@ package default_rpc_impl
 
 //goland:noinspection SpellCheckingInspection
 import (
+	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	"time"
 )
@@ -27,6 +28,35 @@ func (suite *IntegrationTestSuite) Test_defaultRpcClientImpl_IT_BondedValidators
 	})
 
 	suite.Run("Get bonded validators on CometBFT node", func() {
+		testHandler(suite.COMETBFT)
+	})
+}
+
+func (suite *IntegrationTestSuite) Test_defaultRpcClientImpl_IT_ConsensusState() {
+	assertResult := func(roundState *enginetypes.RoundState) {
+		suite.Require().NotNil(roundState)
+
+		suite.NotEmpty(roundState.HeightRoundStep)
+		suite.True(roundState.StartTime.After(time.Now().UTC().Add(-1*365*24*time.Hour)), "expect start time is not too old")
+		suite.NotEmpty(roundState.Votes)
+	}
+
+	testHandler := func(client *defaultRpcClientImpl) {
+		consensusStateViaHTTP, err := client.consensusStateViaHTTP()
+		suite.Require().NoError(err)
+		assertResult(consensusStateViaHTTP)
+
+		consensusStateViaWs, err := client.consensusStateViaWebsocket()
+		if suite.NoError(err) {
+			assertResult(consensusStateViaWs)
+		}
+	}
+
+	suite.Run("Get Consensus State on Tendermint node", func() {
+		testHandler(suite.TM)
+	})
+
+	suite.Run("Get Consensus State on CometBFT node", func() {
 		testHandler(suite.COMETBFT)
 	})
 }
