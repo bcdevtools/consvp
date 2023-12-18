@@ -393,7 +393,9 @@ func (rpc *defaultRpcClientImpl) statusViaHTTP() (*coretypes.ResultStatus, error
 	return resContent.Result, nil
 }
 
-// LatestValidators returns the most recent validator set
+// LatestValidators returns the most recent validator set.
+//
+// CONTRACT: must maintain the same order as the result from the RPC server.
 func (rpc *defaultRpcClientImpl) LatestValidators() ([]*tmtypes.Validator, error) {
 	if rpc.rpcWebsocketClient != nil {
 		return rpc.latestValidatorsViaWebsocket(0)
