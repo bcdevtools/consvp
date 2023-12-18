@@ -1,5 +1,6 @@
 package types
 
+//goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
