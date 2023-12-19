@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"math"
+	"math/rand"
 	"os"
 	"regexp"
 	"strings"
@@ -87,8 +88,18 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		return defaultRefreshInterval
 	}())
 
+	mod5 := rand.Uint32() % 5
+	if mod5 == 0 {
+		fmt.Println("Tips: press 'Q' or 'Ctrl+C' to exit")
+	} else if mod5 == 1 {
+		fmt.Println("Tips: press 'K' / '↑' to scroll up and 'J' / '↓' to scroll down")
+	}
+
 	var chainId, consensusVersion, moniker string = rpcClient.NodeInfo()
 	var lightValidators enginetypes.LightValidators
+
+	fmt.Println("Please wait, getting validators information...")
+	lightValidators, _ = rpcClient.LightValidators()
 
 	votingInfoChan := make(chan interface{}) // accept both voting info and error
 	defer close(votingInfoChan)
@@ -127,7 +138,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 	}
 
 	pSummary := widgets.NewParagraph()
-	summaryTitle := fmt.Sprintf(" %s, consensus v%s", chainId, consensusVersion)
+	summaryTitle := fmt.Sprintf(" %s, tm v%s", chainId, consensusVersion)
 	if len(moniker) > 0 {
 		summaryTitle += fmt.Sprintf(", %s", moniker)
 	}
@@ -237,8 +248,13 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 			preVotedCount := totalVoteCount
 			preCommitVotedCount := totalVoteCount
 			for i := 0; i < terminalColumnsCount; i++ {
-				lists[i].Rows = make([]string, rowsCount)
+				lists[i].Rows = make([]string, rowsCount+1)
+
+				lists[i].Rows[0] = fmt.Sprintf("%-3s %-3s %-4s %-3s %-6s %-15s ", "PV", "PC", "Hash", "Ord", "VPwr", "Moniker")
+
 				for j, voter := range batches[i] {
+					rowIndex := j + 1
+
 					var preVote, preCommitVote string
 
 					if voter.VotedZeroes {
@@ -265,7 +281,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 						valMoniker = valMoniker[:len([]byte(valMoniker))-len(valMoniker)]
 					}
 
-					lists[i].Rows[j] = fmt.Sprintf(
+					lists[i].Rows[rowIndex] = fmt.Sprintf(
 						"%-2s %-2s %s %-3d %s%% %-15s ",
 						preVote,
 						preCommitVote,
