@@ -7,6 +7,7 @@ import (
 	"github.com/bcdevtools/consvp/engine/rpc_client"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	"github.com/pkg/errors"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -58,15 +59,25 @@ func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightV
 			voted = true
 		}
 
-		if //goland:noinspection SpellCheckingInspection
-		strings.Contains(preVote, "SIGNED_MSG_TYPE_PREVOTE(Prevote) 000000000000") {
-			votedZeroes = true
+		var fingerprintBlockHash string
+		if voted {
+			fingerprintBlockHash = extractFingerprintBlockHashVotedOn(preVote)
+
+			if fingerprintBlockHash == "000000000000" {
+				votedZeroes = true
+			} else if strings.HasPrefix(fingerprintBlockHash, "?") { // extract failed
+				if //goland:noinspection SpellCheckingInspection
+				strings.Contains(preVote, "SIGNED_MSG_TYPE_PREVOTE(Prevote) 000000000000") {
+					votedZeroes = true
+				}
+			}
 		}
 
 		validatorVoteStates = append(validatorVoteStates, enginetypes.ValidatorVoteState{
-			Validator:   lightValidator,
-			PreVoted:    voted,
-			VotedZeroes: votedZeroes,
+			Validator:       lightValidator,
+			VotingBlockHash: fingerprintBlockHash,
+			PreVoted:        voted,
+			VotedZeroes:     votedZeroes,
 		})
 
 		// assert index is correct
@@ -118,4 +129,19 @@ func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightV
 // Shutdown must be called when the service is no longer needed.
 func (s *defaultConsensusServiceClientImpl) Shutdown() error {
 	return s.rpcClient.Shutdown()
+}
+
+var regexpContainsFingerprintBlockHash = regexp.MustCompile(`\s+[a-fA-F\d]{12}\s+[a-fA-F\d]{12}\s+@\s+\d{4}`)
+
+func extractFingerprintBlockHashVotedOn(voteString string) (blockHash string) {
+	const defaultUnknownBlockHash = "????????????"
+	blockHash = defaultUnknownBlockHash
+
+	subString := regexpContainsFingerprintBlockHash.FindString(voteString)
+	subString = strings.TrimSpace(subString)
+	if subString != "" {
+		blockHash = strings.Split(subString, " ")[0]
+	}
+
+	return
 }
