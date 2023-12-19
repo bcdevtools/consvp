@@ -4,15 +4,21 @@ package default_rpc_impl
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/bcdevtools/consvp/engine/rpc"
+	"github.com/bcdevtools/consvp/engine/rpc_client"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	"github.com/bcdevtools/consvp/types"
 	"github.com/bcdevtools/consvp/utils"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	cryptoed25519 "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	tmcrypto "github.com/tendermint/tendermint/crypto"
+	tmed25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/libs/json"
 	"github.com/tendermint/tendermint/libs/rand"
 	tmservice "github.com/tendermint/tendermint/libs/service"
@@ -21,12 +27,13 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 )
 
-var _ rpc.RpcClient = (*defaultRpcClientImpl)(nil) // ensure defaultRpcClientImpl implements RpcClient interface
+var _ rpc_client.RpcClient = (*defaultRpcClientImpl)(nil) // ensure defaultRpcClientImpl implements RpcClient interface
 
 // CONTRACT: must be a valid HTTP endpoint, not ends with '/'.
 type normalizedRpcHttpEndpoint string
@@ -77,7 +84,7 @@ func NewDefaultRpcClient(endpoint, optionalProducerEndpoint string, useWebsocket
 	if useWebsocket {
 		result.rpcWebsocketClient, err = createRpcWebsocketClientToRemoteServer(result.endpoint)
 		if err != nil {
-			fmt.Println("Failed to initialize Websocket connect to remote server, switching to use HTTP client")
+			fmt.Println("WARN: Failed to initialize Websocket connect to remote server, switching to use HTTP client")
 			useWebsocket = false
 		}
 		if result.endpoint == result.producerEndpoint && result.rpcWebsocketClient != nil {
@@ -85,7 +92,7 @@ func NewDefaultRpcClient(endpoint, optionalProducerEndpoint string, useWebsocket
 		} else {
 			result.producerRpcWebsocketClient, err = createRpcWebsocketClientToRemoteServer(result.producerEndpoint)
 			if err != nil {
-				fmt.Println("Failed to initialize Websocket connect to remote server, switching to use HTTP client")
+				fmt.Println("WARN: Failed to initialize Websocket connect to remote server, switching to use HTTP client")
 				useWebsocket = false
 			}
 		}
@@ -100,6 +107,88 @@ func NewDefaultRpcClient(endpoint, optionalProducerEndpoint string, useWebsocket
 	result.statusMoniker = status.NodeInfo.Moniker
 
 	return result
+}
+
+// NodeInfo returns upstream RPC server chain id, consensus version and moniker if validator.
+func (rpc *defaultRpcClientImpl) NodeInfo() (chainId, consensusVersion, moniker string) {
+	chainId = rpc.statusNetwork
+	consensusVersion = rpc.statusVersion
+	moniker = rpc.statusMoniker
+	return
+}
+
+// LightValidators returns the list of bonded validators with minimal information needed for application business logic.
+//
+// CONTRACT: must maintain the same order as the result from the RPC server.
+func (rpc *defaultRpcClientImpl) LightValidators() ([]enginetypes.LightValidator, error) {
+	mapper := make(map[string]*enginetypes.LightValidator)
+
+	bondedVals, err := rpc.BondedValidators()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get bonded validators")
+	}
+	for _, bondedVal := range bondedVals {
+		var pubKey cryptoed25519.PubKey
+		err = proto.Unmarshal(bondedVal.ConsensusPubkey.Value, &pubKey)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to unmarshal consensus public key"))
+		}
+
+		tmPublicKey, err := cryptocodec.ToTmProtoPublicKey(&pubKey)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to cast to consensus public key"))
+		}
+
+		var tmPubKey tmcrypto.PubKey
+		tmPubKey = tmed25519.PubKey(tmPublicKey.GetEd25519())
+
+		val := enginetypes.LightValidator{
+			Moniker: bondedVal.Description.Moniker,
+			Address: strings.ToUpper(tmPubKey.Address().String()),
+			PubKey:  base64.StdEncoding.EncodeToString(tmPublicKey.GetEd25519()),
+		}
+		mapper[val.Address] = &val
+	}
+
+	latestVals, err := rpc.LatestValidators()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get latest validators")
+	}
+
+	for i, latestVal := range latestVals {
+		address := strings.ToUpper(latestVal.PubKey.Address().String())
+		if val, ok := mapper[address]; ok {
+			val.Index = i
+			val.VotingPower = latestVal.VotingPower
+		}
+	}
+
+	var result enginetypes.LightValidators
+	var totalVotingPower uint64
+
+	for _, val := range mapper {
+		if val.VotingPower < 1 {
+			continue
+		}
+		result = append(result, *val)
+		totalVotingPower += uint64(val.VotingPower)
+	}
+
+	for i, val := range result {
+		val.VotingPowerDisplayPercent = 100 * (float64(val.VotingPower) / float64(totalVotingPower))
+		val.VotingPowerDisplayPercent = float64(int64(val.VotingPowerDisplayPercent*100)) / 100
+		if val.VotingPower > 0 && val.VotingPowerDisplayPercent < 0.01 {
+			// avoid 0.00% for small voting power because all validators at this point, has voting power
+			val.VotingPowerDisplayPercent = 0.01
+		}
+		result[i] = val
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Index < result[j].Index
+	})
+
+	return result, nil
 }
 
 // BondedValidators returns the list of bonded validators
@@ -264,6 +353,7 @@ func (rpc *defaultRpcClientImpl) bondedValidatorsViaHTTP() ([]stakingtypes.Valid
 	return validators, nil
 }
 
+// ConsensusState fetches the current consensus state from the RPC server ':26657/consensus_state'.
 func (rpc *defaultRpcClientImpl) ConsensusState() (*enginetypes.RoundState, error) {
 	var resultRoundState *enginetypes.RoundState
 	var err error
@@ -316,7 +406,6 @@ func (rpc *defaultRpcClientImpl) consensusStateViaHTTP() (*enginetypes.RoundStat
 		return nil, errors.Wrap(err, "error reading response from rpc '/consensus_state' endpoint")
 	}
 
-	fmt.Println(string(bz))
 	var resContent enginetypes.BaseRpcResponse[enginetypes.RoundStateResponse]
 	err = json.Unmarshal(bz, &resContent)
 	if err != nil {
@@ -335,7 +424,7 @@ func (rpc *defaultRpcClientImpl) consensusStateViaHTTP() (*enginetypes.RoundStat
 	return resContent.Result.RoundState, nil
 }
 
-// Status returns the status of the RPC server
+// Status fetches the current status from the RPC server ':26657/status'.
 func (rpc *defaultRpcClientImpl) Status() (*coretypes.ResultStatus, error) {
 	var resultStatus *coretypes.ResultStatus
 	var err error
@@ -393,7 +482,7 @@ func (rpc *defaultRpcClientImpl) statusViaHTTP() (*coretypes.ResultStatus, error
 	return resContent.Result, nil
 }
 
-// LatestValidators returns the most recent validator set.
+// LatestValidators returns the most recent validator set from the RPC server ':26657/validators'.
 //
 // CONTRACT: must maintain the same order as the result from the RPC server.
 func (rpc *defaultRpcClientImpl) LatestValidators() ([]*tmtypes.Validator, error) {

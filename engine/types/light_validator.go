@@ -2,15 +2,18 @@ package types
 
 import "fmt"
 
+// LightValidator is a light version of Validator, it contains minimal information needed for application business logic.
 type LightValidator struct {
 	Index                     int // index in the validator set returned by RPC '/validators'
 	Moniker                   string
 	Address                   string
 	PubKey                    string
 	VotingPower               int64
-	VotingPowerDisplayPercent float64
+	VotingPowerDisplayPercent float64 // the value is rounded so only use for display purpose
 }
 
+// GetFingerPrintAddress returns the first 6 bytes of the address.
+// Tendermint/CometBFT is using this to identify the validator in pre-(commit)-votes.
 func (lv LightValidator) GetFingerPrintAddress() string {
 	return lv.Address[:12]
 }

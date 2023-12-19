@@ -1,4 +1,4 @@
-package rpc
+package rpc_client
 
 //goland:noinspection SpellCheckingInspection
 import (
@@ -12,15 +12,24 @@ import (
 //
 //goland:noinspection GoNameStartsWithPackageName
 type RpcClient interface {
+	// NodeInfo returns upstream RPC server chain id, consensus version and moniker if validator.
+	NodeInfo() (chainId, consensusVersion, moniker string)
+
+	// LightValidators returns the list of bonded validators with minimal information needed for application business logic.
+	//
+	// CONTRACT: must maintain the same order as the result from the RPC server.
+	LightValidators() ([]enginetypes.LightValidator, error)
+
 	// BondedValidators returns the list of bonded validators
 	BondedValidators() ([]stakingtypes.Validator, error)
 
+	// ConsensusState fetches the current consensus state from the RPC server ':26657/consensus_state'.
 	ConsensusState() (*enginetypes.RoundState, error)
 
-	// Status returns the status of the RPC server
+	// Status fetches the current status from the RPC server ':26657/status'.
 	Status() (*coretypes.ResultStatus, error)
 
-	// LatestValidators returns the most recent validator set.
+	// LatestValidators returns the most recent validator set from the RPC server ':26657/validators'.
 	//
 	// CONTRACT: must maintain the same order as the result from the RPC server.
 	LatestValidators() ([]*tmtypes.Validator, error)

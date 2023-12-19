@@ -7,6 +7,38 @@ import (
 	"time"
 )
 
+func (suite *IntegrationTestSuite) Test_defaultRpcClientImpl_IT_LightValidators() {
+	testHandler := func(client *defaultRpcClientImpl) {
+		lightVals, err := client.LightValidators()
+		suite.Require().NoError(err)
+		suite.Require().NotEmpty(lightVals)
+
+		filledIndexes := make([]bool, len(lightVals))
+
+		for _, lightVal := range lightVals {
+			suite.NotEmpty(lightVal.Moniker)
+			suite.NotEmpty(lightVal.Address)
+			suite.NotEmpty(lightVal.PubKey)
+			suite.Greater(lightVal.VotingPower, int64(0))
+			suite.Greater(lightVal.VotingPowerDisplayPercent, float64(0))
+
+			filledIndexes[lightVal.Index] = true
+		}
+
+		for i, isFilled := range filledIndexes {
+			suite.True(isFilled, "index %d not found", i)
+		}
+	}
+
+	suite.Run("Get light validators on Tendermint node", func() {
+		testHandler(suite.TM)
+	})
+
+	suite.Run("Get light validators on CometBFT node", func() {
+		testHandler(suite.COMETBFT)
+	})
+}
+
 func (suite *IntegrationTestSuite) Test_defaultRpcClientImpl_IT_BondedValidators() {
 	testHandler := func(client *defaultRpcClientImpl) {
 		validatorsViaHTTP, err := client.bondedValidatorsViaHTTP()
