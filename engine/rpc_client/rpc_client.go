@@ -12,6 +12,9 @@ import (
 //
 //goland:noinspection GoNameStartsWithPackageName
 type RpcClient interface {
+	// NodeInfo returns upstream RPC server chain id, consensus version and moniker if validator.
+	NodeInfo() (chainId, consensusVersion, moniker string)
+
 	// LightValidators returns the list of bonded validators with minimal information needed for application business logic.
 	//
 	// CONTRACT: must maintain the same order as the result from the RPC server.

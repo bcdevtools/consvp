@@ -109,6 +109,14 @@ func NewDefaultRpcClient(endpoint, optionalProducerEndpoint string, useWebsocket
 	return result
 }
 
+// NodeInfo returns upstream RPC server chain id, consensus version and moniker if validator.
+func (rpc *defaultRpcClientImpl) NodeInfo() (chainId, consensusVersion, moniker string) {
+	chainId = rpc.statusNetwork
+	consensusVersion = rpc.statusVersion
+	moniker = rpc.statusMoniker
+	return
+}
+
 // LightValidators returns the list of bonded validators with minimal information needed for application business logic.
 //
 // CONTRACT: must maintain the same order as the result from the RPC server.

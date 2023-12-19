@@ -9,8 +9,11 @@ import (
 	drpci "github.com/bcdevtools/consvp/engine/rpc_client/default_rpc_impl"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	"github.com/bcdevtools/consvp/utils"
+	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -63,14 +66,16 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 
 	var rpcClient rpc_client.RpcClient
 	var consensusService conss.ConsensusService
-	defer func() {
+	exitCallback := func() {
 		if rpcClient != nil {
 			_ = rpcClient.Shutdown()
 		}
 		if consensusService != nil {
 			_ = consensusService.Shutdown()
 		}
-	}()
+	}
+
+	defer exitCallback()
 
 	rpcClient = drpci.NewDefaultRpcClient(consumerUrl, providerUrl, !useHttp)
 	consensusService = dconsi.NewDefaultConsensusServiceClientImpl(rpcClient)
@@ -82,9 +87,12 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		return defaultRefreshInterval
 	}())
 
+	var chainId, consensusVersion, moniker string = rpcClient.NodeInfo()
 	var lightValidators enginetypes.LightValidators
 
 	votingInfoChan := make(chan interface{}) // accept both voting info and error
+
+	go drawScreen(chainId, consensusVersion, moniker, votingInfoChan, exitCallback)
 
 	for range refreshTicker.C {
 		if len(lightValidators) < 1 {
@@ -106,6 +114,179 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 
 		votingInfoChan <- nextBlockVotingInfo
 	}
+}
+
+// drawScreen render pre-vote information into screen.
+func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan interface{}, exitCallback func()) {
+	if err := ui.Init(); err != nil {
+		log.Fatalf("failed to initialize termui: %v", err)
+	}
+	preVotePctGauge := widgets.NewGauge()
+	preCommitVotePctGauge := widgets.NewGauge()
+
+	p := widgets.NewParagraph()
+	p.Title = fmt.Sprintf("%s, consensus v%s", chainId, consensusVersion)
+
+	lists := make([]*widgets.List, 3)
+	for i := range lists {
+		lists[i] = widgets.NewList()
+		lists[i].Border = false
+	}
+	grid := ui.NewGrid()
+	termWidth, termHeight := ui.TerminalDimensions()
+	grid.SetRect(0, 0, termWidth, termHeight)
+
+	grid.Set(
+		ui.NewRow(0.1,
+			ui.NewCol(1.0/3, p),
+			ui.NewCol(1.0/3, preVotePctGauge),
+			ui.NewCol(1.0/3, preCommitVotePctGauge),
+		),
+		ui.NewRow(0.9,
+			ui.NewCol(.9/3, lists[0]),
+			ui.NewCol(.9/3, lists[1]),
+			ui.NewCol(1.2/3, lists[2]),
+		),
+	)
+	ui.Render(grid)
+
+	refresh := false
+	tick := time.NewTicker(100 * time.Millisecond)
+	uiEvents := ui.PollEvents()
+
+	for {
+		select {
+		case <-tick.C:
+			if !refresh {
+				continue
+			}
+			refresh = false
+			ui.Render(grid)
+
+			break
+		case e := <-uiEvents:
+			switch e.ID {
+			case "q", "<C-c>":
+				ui.Clear()
+				ui.Close()
+
+				exitCallback()
+
+				os.Exit(0)
+			case "j", "<Down>":
+				for _, list := range lists {
+					if len(list.Rows) > 0 {
+						list.ScrollBottom()
+					}
+				}
+
+				break
+			case "k", "<Up>":
+				for _, list := range lists {
+					if len(list.Rows) > 0 {
+						list.ScrollTop()
+					}
+				}
+
+				break
+			case "<Resize>":
+				payload := e.Payload.(ui.Resize)
+				grid.SetRect(0, 0, payload.Width, payload.Height)
+				ui.Clear()
+				ui.Render(grid)
+
+				break
+			}
+
+			break
+		case votingInfoAny := <-votingInfoChan:
+			refresh = true
+
+			if err, ok := votingInfoAny.(error); ok {
+				p.Text = err.Error()
+				continue
+			}
+
+			votingInfo := votingInfoAny.(*enginetypes.NextBlockVotingInformation)
+
+			duration := time.Now().UTC().Sub(votingInfo.StartTimeUTC)
+			if duration < 0 {
+				duration = 0
+			}
+
+			p.Text = fmt.Sprintf(
+				"height/round/step: %s - v: %.0f%% c: %.0f%% (%v)\n\nProposer:\n(rank/%%/moniker) %s",
+				votingInfo.HeightRoundStep,
+				votingInfo.PreVotePercent*100,
+				votingInfo.PreCommitPercent*100,
+				duration,
+				moniker,
+			)
+
+			split, columns, rows := splitVotes(votingInfo.SortedValidatorVoteStates)
+			for i := 0; i < columns; i++ {
+				lists[i].Rows = make([]string, rows)
+				for j, voter := range split[i] {
+					var preVote, preCommitVote string
+
+					if voter.VotedZeroes {
+						preVote = "🤷"
+					} else if voter.PreVoted {
+						preVote = "✅"
+					} else {
+						preVote = "❌"
+					}
+					if voter.PreCommitVoted {
+						preCommitVote = "✅"
+					} else {
+						preCommitVote = "❌"
+					}
+
+					valMoniker := voter.Validator.Moniker
+					if len([]byte(valMoniker)) > 20 {
+						valMoniker = string(append([]byte(valMoniker[:14]), []byte("...")...))
+					}
+					if len([]byte(valMoniker)) > len(valMoniker) {
+						valMoniker = valMoniker[:len([]byte(valMoniker))-len(valMoniker)]
+					}
+
+					validatorDescription := fmt.Sprintf("%-3d %-.2f%%   %-20s ", voter.Validator.Index+1, voter.Validator.VotingPowerDisplayPercent, valMoniker)
+
+					lists[i].Rows[j] = fmt.Sprintf("%-3s %-3s %s", preVote, preCommitVote, validatorDescription)
+				}
+			}
+
+			preVotePctGauge.Percent = int(votingInfo.PreVotePercent * 100)
+			preCommitVotePctGauge.Percent = int(votingInfo.PreCommitPercent * 100)
+
+			break
+		}
+	}
+}
+
+func splitVotes(votes []enginetypes.ValidatorVoteState) ([][]enginetypes.ValidatorVoteState, int, int) {
+	// TODO review logic
+
+	batches := make([][]enginetypes.ValidatorVoteState, 0)
+	var columnsCount int
+	var rows = 50
+
+	switch {
+	case len(votes) < 50:
+		columnsCount = 1
+		batches = append(batches, votes)
+	case len(votes) < 100:
+		columnsCount = 2
+		batches = append(batches, votes[:50])
+		batches = append(batches, votes[50:])
+	default:
+		columnsCount = 3
+		rows = (len(votes) + columnsCount - 1) / 3
+		batches = append(batches, votes[:rows])
+		batches = append(batches, votes[rows:rows*2])
+		batches = append(batches, votes[rows*2:])
+	}
+	return batches, columnsCount, rows
 }
 
 // readPvTopArg reads the argument at the given index, and returns an error if it is missing but required.
