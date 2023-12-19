@@ -1,5 +1,7 @@
 # ConsVP
-Similar to [pvtop](https://github.com/blockpane/pvtop), but plus some miracle
+A simple utility for watching pre-vote status on Tendermint/CometBFT chains. It will print out the current pre-vote status for each validator in the validator set. Useful for watching pre-votes during an upgrade or other network event causing a slowdown.
+
+_Similar to [pvtop](https://github.com/blockpane/pvtop), but plus some miracles_
 
 ## Installation
 ```bash
@@ -9,24 +11,22 @@ go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ## Basic usage
 ### PVTop-like command
 ```bash
-cvp pvtop
+cvp
 # => use http://localhost:26657
-
-cvp pv # alias
 ```
 
 ```bash
-cvp pv 19000
+cvp 19000
 # => use http://localhost:19000
 ```
 
 ```bash
-cvp pv https://rpc.cosmos.network
+cvp https://rpc.cosmos.network
 # => use https://rpc.cosmos.network
 ```
 
 ```bash
-cvp pv https://rpc.example-consumer.network https://rpc.cosmos.network
+cvp https://rpc.example-consumer.network https://rpc.cosmos.network
 # => use https://rpc.example-consumer.network as consumer network RPC endpoint
 # and use https://rpc.cosmos.network as producer network RPC endpoint (typically Cosmos Hub)
 ```
@@ -39,8 +39,20 @@ cvp pv https://rpc.example-consumer.network https://rpc.cosmos.network
 | ❌       | ❌         | ----       | 3     | 08.07%       | Val3    |
 | ✅       | ✅         | COFF       | 4     | 01.15%       | Val4    |
 
-## Update binary
+### Check binary version
 ```bash
-cvp update
+cvp --version
+```
+
+### Update binary
+```bash
+cvp --update
 # Actually it does: go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ```
+
+## Miracles
+- [x] Full `pvtop` feature (thanks to [@blockpane](https://github.com/blockpane))
+- [ ] TODO: Live streaming mode, sharing voting information to everyone
+- [x] Display fingerprint of the Block Hash validators voted on
+- [x] Allow scrolling (thanks to [@freak12techno](https://github.com/freak12techno))
+- [x] Allow to update binary by using `--update` flag

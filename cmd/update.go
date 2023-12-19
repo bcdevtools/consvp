@@ -10,33 +10,28 @@ import (
 	"strings"
 )
 
+const (
+	flagUpdate = "update"
+)
+
 //goland:noinspection SpellCheckingInspection
 const updateCli = "go install -v github.com/bcdevtools/consvp/cmd/cvp@latest"
 
-// updateCmd represents the update command, it updates current binary to the latest version
-//
-//goland:noinspection SpellCheckingInspection
-var updateCmd = &cobra.Command{
-	Use: "update",
-	Short: fmt.Sprintf(`Update binary %s to the latest version by running command:
-> %s`, constants.BINARY_NAME, updateCli),
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Current version: %s\n", constants.VERSION)
-		spl := strings.Split(updateCli, " ")
-		bz, err := exec.Command(spl[0], spl[1:]...).Output()
-		if err != nil {
-			utils.PrintfStdErr("Failed to update binary %s: %s\n", constants.BINARY_NAME, err)
-			if len(bz) > 0 {
-				utils.PrintlnStdErr(string(bz))
-			}
-			os.Exit(1)
-		}
-		fmt.Println("New version:")
-		bz, _ = exec.Command(constants.BINARY_NAME, "version").Output()
-		fmt.Println(string(bz))
-	},
-}
+func updateHandler(_ *cobra.Command, _ []string) {
+	fmt.Printf("Current version: %s\n", constants.VERSION)
 
-func init() {
-	rootCmd.AddCommand(updateCmd)
+	fmt.Println("Executing command:")
+	fmt.Println(">", updateCli)
+	spl := strings.Split(updateCli, " ")
+	bz, err := exec.Command(spl[0], spl[1:]...).Output()
+	if err != nil {
+		utils.PrintfStdErr("Failed to update binary %s: %s\n", constants.BINARY_NAME, err)
+		if len(bz) > 0 {
+			utils.PrintlnStdErr(string(bz))
+		}
+		os.Exit(1)
+	}
+	fmt.Println("New version:")
+	bz, _ = exec.Command(constants.BINARY_NAME, fmt.Sprintf("--%s", flagVersion)).Output()
+	fmt.Println(string(bz))
 }

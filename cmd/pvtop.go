@@ -3,6 +3,7 @@ package cmd
 //goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
+	"github.com/bcdevtools/consvp/constants"
 	conss "github.com/bcdevtools/consvp/engine/consensus_service"
 	dconsi "github.com/bcdevtools/consvp/engine/consensus_service/default_conss_impl"
 	"github.com/bcdevtools/consvp/engine/rpc_client"
@@ -29,22 +30,14 @@ const (
 const defaultRefreshInterval = 3 * time.Second
 const rapidRefreshInterval = 1 * time.Second
 
-// pvtopCmd represents the version command, it prints the current version of the binary
-var pvtopCmd = &cobra.Command{
-	Use:     "pvtop [port/host/consumer] [?optionalProvider/optionalProviderPort]",
-	Aliases: []string{"pv"},
-	Long: `Show pre-vote. Provider/consumer mode is typically for CosmosHub only.
-If no arguments are provided, the default port is 26657 and the default host is localhost.
-If only a port is provided, the default host is localhost.
-`,
-	Run: pvtopHandler,
-}
-
 func pvtopHandler(cmd *cobra.Command, args []string) {
-	if len(args) < 1 || len(args) > 2 {
+	if len(args) > 2 {
 		utils.PrintlnStdErr("ERR: Invalid number of arguments")
 		os.Exit(1)
 	}
+
+	fmt.Println(constants.APP_INTRO)
+	fmt.Println()
 
 	consumerUrl, err := readPvTopArg(args, 0, true)
 	if err != nil {
@@ -352,11 +345,4 @@ func readPvTopArg(args []string, index int, optional bool) (arg string, err erro
 	}
 
 	return
-}
-
-func init() {
-	pvtopCmd.Flags().Bool(flagHttp, false, "use http call for rpc client instead of default is websocket")
-	pvtopCmd.Flags().BoolP(flagRapidRefresh, "r", false, fmt.Sprintf("refresh rate quicker, default is %v will be changed to %v", defaultRefreshInterval, rapidRefreshInterval))
-
-	rootCmd.AddCommand(pvtopCmd)
 }
