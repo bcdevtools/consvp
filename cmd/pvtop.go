@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"math"
+	"math/rand"
 	"os"
 	"regexp"
 	"strings"
@@ -87,8 +88,18 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		return defaultRefreshInterval
 	}())
 
+	mod5 := rand.Uint32() % 5
+	if mod5 == 0 {
+		fmt.Println("Tips: press 'Q' or 'Ctrl+C' to exit")
+	} else if mod5 == 1 {
+		fmt.Println("Tips: press 'K' / '↑' to scroll up and 'J' / '↓' to scroll down")
+	}
+
 	var chainId, consensusVersion, moniker string = rpcClient.NodeInfo()
 	var lightValidators enginetypes.LightValidators
+
+	fmt.Println("Please wait, getting validators information...")
+	lightValidators, _ = rpcClient.LightValidators()
 
 	votingInfoChan := make(chan interface{}) // accept both voting info and error
 	defer close(votingInfoChan)
