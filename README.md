@@ -3,30 +3,30 @@ Similar to [pvtop](https://github.com/blockpane/pvtop), but plus some miracle
 
 ## Installation
 ```bash
-go install -v github.com/bcdevtools/consvp/cmd/consvpd@latest
+go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ```
 
 ## Basic usage
 ### PVTop-like command
 ```bash
-consvpd pvtop
+cvp pvtop
 # => use http://localhost:26657
 
-consvpd pv # alias
+cvp pv # alias
 ```
 
 ```bash
-consvpd pv 19000
+cvp pv 19000
 # => use http://localhost:19000
 ```
 
 ```bash
-consvpd pv https://rpc.cosmos.network
+cvp pv https://rpc.cosmos.network
 # => use https://rpc.cosmos.network
 ```
 
 ```bash
-consvpd pv https://rpc.example-consumer.network https://rpc.cosmos.network
+cvp pv https://rpc.example-consumer.network https://rpc.cosmos.network
 # => use https://rpc.example-consumer.network as consumer network RPC endpoint
 # and use https://rpc.cosmos.network as producer network RPC endpoint (typically Cosmos Hub)
 ```
@@ -41,6 +41,6 @@ consvpd pv https://rpc.example-consumer.network https://rpc.cosmos.network
 
 ## Update binary
 ```bash
-consvpd update
-# Actually it does: go install -v github.com/bcdevtools/consvp/cmd/consvpd@latest
+cvp update
+# Actually it does: go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ```

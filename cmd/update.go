@@ -11,7 +11,7 @@ import (
 )
 
 //goland:noinspection SpellCheckingInspection
-const updateCli = "go install -v github.com/bcdevtools/consvp/cmd/consvpd@latest"
+const updateCli = "go install -v github.com/bcdevtools/consvp/cmd/cvp@latest"
 
 // updateCmd represents the update command, it updates current binary to the latest version
 //
