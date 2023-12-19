@@ -125,11 +125,17 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 		//goland:noinspection SpellCheckingInspection
 		utils.PrintfStdErr("failed to initialize termui: %v\n", err)
 	}
+
+	pSummary := widgets.NewParagraph()
+	summaryTitle := fmt.Sprintf(" %s, consensus v%s", chainId, consensusVersion)
+	if len(moniker) > 0 {
+		summaryTitle += fmt.Sprintf(", %s", moniker)
+	}
+	summaryTitle += " "
+	pSummary.Title = summaryTitle
+
 	preVotePctGauge := widgets.NewGauge()
 	preCommitVotePctGauge := widgets.NewGauge()
-
-	p := widgets.NewParagraph()
-	p.Title = fmt.Sprintf("%s, consensus v%s", chainId, consensusVersion)
 
 	lists := make([]*widgets.List, terminalColumnsCount)
 	for i := range lists {
@@ -142,14 +148,14 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 
 	grid.Set(
 		ui.NewRow(0.1,
-			ui.NewCol(1.0/terminalColumnsCount, p),
+			ui.NewCol(1.0/terminalColumnsCount, pSummary),
 			ui.NewCol(1.0/terminalColumnsCount, preVotePctGauge),
 			ui.NewCol(1.0/terminalColumnsCount, preCommitVotePctGauge),
 		),
 		ui.NewRow(0.9,
-			ui.NewCol(.9/terminalColumnsCount, lists[0]),
-			ui.NewCol(.9/terminalColumnsCount, lists[1]),
-			ui.NewCol(1.2/terminalColumnsCount, lists[2]),
+			ui.NewCol(.96/terminalColumnsCount, lists[0]),
+			ui.NewCol(.96/terminalColumnsCount, lists[1]),
+			ui.NewCol(1.08/terminalColumnsCount, lists[2]),
 		),
 	)
 	ui.Render(grid)
@@ -207,7 +213,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 			refresh = true
 
 			if err, ok := votingInfoAny.(error); ok {
-				p.Text = err.Error()
+				pSummary.Text = err.Error()
 				continue
 			}
 
@@ -218,16 +224,18 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 				duration = 0
 			}
 
-			p.Text = fmt.Sprintf(
-				"height/round/step: %s - v: %.0f%% c: %.0f%% (%v)\n\nProposer:\n(rank/%%/moniker) %s",
+			pSummary.Text = fmt.Sprintf(
+				"%v\nheight/round/step: %s\nv: %.0f%% c: %.0f%%",
+				duration,
 				votingInfo.HeightRoundStep,
 				votingInfo.PreVotePercent*100,
 				votingInfo.PreCommitPercent*100,
-				duration,
-				moniker,
 			)
 
 			batches, rowsCount := splitVotesIntoColumnsForRendering(votingInfo.SortedValidatorVoteStates)
+			totalVoteCount := len(votingInfo.SortedValidatorVoteStates)
+			preVotedCount := totalVoteCount
+			preCommitVotedCount := totalVoteCount
 			for i := 0; i < terminalColumnsCount; i++ {
 				lists[i].Rows = make([]string, rowsCount)
 				for j, voter := range batches[i] {
@@ -239,28 +247,51 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 						preVote = "✅"
 					} else {
 						preVote = "❌"
+						preVotedCount--
 					}
 					if voter.PreCommitVoted {
+
 						preCommitVote = "✅"
 					} else {
 						preCommitVote = "❌"
+						preCommitVotedCount--
 					}
 
 					valMoniker := voter.Validator.Moniker
-					if len([]byte(valMoniker)) > 20 {
-						valMoniker = string(append([]byte(valMoniker[:14]), []byte("...")...))
+					if len([]byte(valMoniker)) > 15 {
+						valMoniker = string(append([]byte(valMoniker[:9]), []byte("...")...))
 					}
 					if len([]byte(valMoniker)) > len(valMoniker) {
 						valMoniker = valMoniker[:len([]byte(valMoniker))-len(valMoniker)]
 					}
 
-					validatorDescription := fmt.Sprintf("%-3d %-.2f%%   %-20s ", voter.Validator.Index+1, voter.Validator.VotingPowerDisplayPercent, valMoniker)
-
-					lists[i].Rows[j] = fmt.Sprintf("%-3s %-3s %s", preVote, preCommitVote, validatorDescription)
+					lists[i].Rows[j] = fmt.Sprintf(
+						"%-2s %-2s %s %-3d %s%% %-15s ",
+						preVote,
+						preCommitVote,
+						func() string {
+							if len(voter.VotingBlockHash) >= 4 {
+								return voter.VotingBlockHash[:4]
+							} else {
+								return "----"
+							}
+						}(),
+						voter.Validator.Index+1,
+						func() string {
+							str := fmt.Sprintf("%-.2f", voter.Validator.VotingPowerDisplayPercent)
+							if strings.Index(str, ".") == 1 { // VP percent < 10
+								str = "0" + str
+							}
+							return str
+						}(),
+						valMoniker,
+					)
 				}
 			}
 
+			preVotePctGauge.Title = fmt.Sprintf(" Pre-vote: %d/%d ", preVotedCount, totalVoteCount)
 			preVotePctGauge.Percent = int(votingInfo.PreVotePercent * 100)
+			preCommitVotePctGauge.Title = fmt.Sprintf(" Pre-commit: %d/%d ", preCommitVotedCount, totalVoteCount)
 			preCommitVotePctGauge.Percent = int(votingInfo.PreCommitPercent * 100)
 
 			break
