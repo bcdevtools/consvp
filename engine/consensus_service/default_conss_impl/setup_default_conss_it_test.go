@@ -2,7 +2,7 @@ package default_conss_impl
 
 //goland:noinspection SpellCheckingInspection
 import (
-	"github.com/bcdevtools/consvp/engine/rpc/default_rpc_impl"
+	"github.com/bcdevtools/consvp/engine/rpc_client/default_rpc_impl"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )

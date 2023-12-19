@@ -10,17 +10,18 @@ func (suite *IntegrationTestSuite) Test_defaultConsensusServiceClientImpl_IT_Get
 	suite.Require().NoError(err)
 	suite.Require().NotEmpty(lightVals)
 
-	sortedValidatorVoteStates, preVotePercent, preCommitPercent, heightRoundStep, startTimeUTC, err := suite.SVC.GetNextBlockVotingInformation(lightVals)
+	nextBlockVotingInfo, err := suite.SVC.GetNextBlockVotingInformation(lightVals)
 	suite.Require().NoError(err)
-	suite.NotEmpty(sortedValidatorVoteStates)
-	suite.NotEmpty(heightRoundStep)
-	suite.True(startTimeUTC.After(time.Now().UTC().Add(-24*time.Hour)), "expect start time is not too old")
+	suite.Require().NotNil(nextBlockVotingInfo)
+	suite.NotEmpty(nextBlockVotingInfo.SortedValidatorVoteStates)
+	suite.NotEmpty(nextBlockVotingInfo.HeightRoundStep)
+	suite.True(nextBlockVotingInfo.StartTimeUTC.After(time.Now().UTC().Add(-24*time.Hour)), "expect start time is not too old")
 
-	fmt.Println("Voting information for", heightRoundStep, ", starts at", startTimeUTC)
-	fmt.Println("Pre-vote percent:", preVotePercent)
-	fmt.Println("Pre-commit percent:", preCommitPercent)
+	fmt.Println("Voting information for", nextBlockVotingInfo.HeightRoundStep, ", starts at", nextBlockVotingInfo.StartTimeUTC)
+	fmt.Println("Pre-vote percent:", nextBlockVotingInfo.PreVotePercent)
+	fmt.Println("Pre-commit percent:", nextBlockVotingInfo.PreCommitPercent)
 	fmt.Println("Validators:")
-	for i, val := range sortedValidatorVoteStates {
+	for i, val := range nextBlockVotingInfo.SortedValidatorVoteStates {
 		if i > 0 {
 			fmt.Println("__________________")
 		}

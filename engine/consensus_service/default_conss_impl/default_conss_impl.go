@@ -4,23 +4,22 @@ package default_conss_impl
 import (
 	"fmt"
 	"github.com/bcdevtools/consvp/engine/consensus_service"
-	"github.com/bcdevtools/consvp/engine/rpc"
+	"github.com/bcdevtools/consvp/engine/rpc_client"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	"github.com/pkg/errors"
 	"sort"
 	"strings"
-	"time"
 )
 
 var _ consensus_service.ConsensusService = (*defaultConsensusServiceClientImpl)(nil) // ensure defaultConsensusServiceClientImpl implements ConsensusService interface
 
 type defaultConsensusServiceClientImpl struct {
-	rpcClient rpc.RpcClient
+	rpcClient rpc_client.RpcClient
 }
 
 // NewDefaultConsensusServiceClientImpl returns the default implementation of ConsensusService,
 // which uses the RPC client to query the consensus state.
-func NewDefaultConsensusServiceClientImpl(rpcClient rpc.RpcClient) *defaultConsensusServiceClientImpl {
+func NewDefaultConsensusServiceClientImpl(rpcClient rpc_client.RpcClient) *defaultConsensusServiceClientImpl {
 	return &defaultConsensusServiceClientImpl{
 		rpcClient: rpcClient,
 	}
@@ -29,21 +28,10 @@ func NewDefaultConsensusServiceClientImpl(rpcClient rpc.RpcClient) *defaultConse
 // GetNextBlockVotingInformation returns the voting status of validators for the next block.
 //
 // Output voting information is sorted descending by voting power.
-func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightValidators enginetypes.LightValidators) (sortedValidatorVoteStates []enginetypes.ValidatorVoteState, preVotePercent, preCommitPercent float64, heightRoundStep string, startTimeUTC time.Time, err error) {
+func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightValidators enginetypes.LightValidators) (nextBlockVotingInfo *enginetypes.NextBlockVotingInformation, err error) {
 	if len(lightValidators) < 1 {
 		panic("light validator list is empty")
 	}
-
-	defer func() {
-		if err != nil {
-			// clean up
-			sortedValidatorVoteStates = nil
-			preVotePercent = 0.0
-			preCommitPercent = 0.0
-			heightRoundStep = ""
-			startTimeUTC = time.Time{}
-		}
-	}()
 
 	consensusState, err := s.rpcClient.ConsensusState()
 	if err != nil {
@@ -97,26 +85,32 @@ func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightV
 		validatorVoteStates[i].PreCommitVoted = committed
 	}
 
-	preVotePercent, err = consensusState.GetPreVotePercent(round)
+	preVotePercent, err := consensusState.GetPreVotePercent(round)
 	if err != nil {
 		err = errors.Wrap(err, "failed to extract pre-vote percent")
 		return
 	}
 
-	preCommitPercent, err = consensusState.GetPreCommitPercent(round)
+	preCommitPercent, err := consensusState.GetPreCommitPercent(round)
 	if err != nil {
 		err = errors.Wrap(err, "failed to extract pre-commit percent")
 		return
 	}
 
-	startTimeUTC = consensusState.StartTime
-	heightRoundStep = consensusState.HeightRoundStep
+	startTimeUTC := consensusState.StartTime
+	heightRoundStep := consensusState.HeightRoundStep
 
 	sort.Slice(validatorVoteStates, func(i, j int) bool {
 		return validatorVoteStates[i].Validator.VotingPower > validatorVoteStates[j].Validator.VotingPower
 	})
 
-	sortedValidatorVoteStates = validatorVoteStates
+	nextBlockVotingInfo = &enginetypes.NextBlockVotingInformation{
+		SortedValidatorVoteStates: validatorVoteStates,
+		PreVotePercent:            preVotePercent,
+		PreCommitPercent:          preCommitPercent,
+		HeightRoundStep:           heightRoundStep,
+		StartTimeUTC:              startTimeUTC,
+	}
 
 	return
 }

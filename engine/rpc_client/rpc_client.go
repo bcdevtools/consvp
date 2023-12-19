@@ -1,4 +1,4 @@
-package rpc
+package rpc_client
 
 //goland:noinspection SpellCheckingInspection
 import (

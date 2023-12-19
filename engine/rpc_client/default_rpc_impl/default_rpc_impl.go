@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/bcdevtools/consvp/engine/rpc"
+	"github.com/bcdevtools/consvp/engine/rpc_client"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	"github.com/bcdevtools/consvp/types"
 	"github.com/bcdevtools/consvp/utils"
@@ -33,7 +33,7 @@ import (
 	"sync"
 )
 
-var _ rpc.RpcClient = (*defaultRpcClientImpl)(nil) // ensure defaultRpcClientImpl implements RpcClient interface
+var _ rpc_client.RpcClient = (*defaultRpcClientImpl)(nil) // ensure defaultRpcClientImpl implements RpcClient interface
 
 // CONTRACT: must be a valid HTTP endpoint, not ends with '/'.
 type normalizedRpcHttpEndpoint string
@@ -84,7 +84,7 @@ func NewDefaultRpcClient(endpoint, optionalProducerEndpoint string, useWebsocket
 	if useWebsocket {
 		result.rpcWebsocketClient, err = createRpcWebsocketClientToRemoteServer(result.endpoint)
 		if err != nil {
-			fmt.Println("Failed to initialize Websocket connect to remote server, switching to use HTTP client")
+			fmt.Println("WARN: Failed to initialize Websocket connect to remote server, switching to use HTTP client")
 			useWebsocket = false
 		}
 		if result.endpoint == result.producerEndpoint && result.rpcWebsocketClient != nil {
@@ -92,7 +92,7 @@ func NewDefaultRpcClient(endpoint, optionalProducerEndpoint string, useWebsocket
 		} else {
 			result.producerRpcWebsocketClient, err = createRpcWebsocketClientToRemoteServer(result.producerEndpoint)
 			if err != nil {
-				fmt.Println("Failed to initialize Websocket connect to remote server, switching to use HTTP client")
+				fmt.Println("WARN: Failed to initialize Websocket connect to remote server, switching to use HTTP client")
 				useWebsocket = false
 			}
 		}
@@ -398,7 +398,6 @@ func (rpc *defaultRpcClientImpl) consensusStateViaHTTP() (*enginetypes.RoundStat
 		return nil, errors.Wrap(err, "error reading response from rpc '/consensus_state' endpoint")
 	}
 
-	fmt.Println(string(bz))
 	var resContent enginetypes.BaseRpcResponse[enginetypes.RoundStateResponse]
 	err = json.Unmarshal(bz, &resContent)
 	if err != nil {
