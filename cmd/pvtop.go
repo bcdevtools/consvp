@@ -127,7 +127,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 	}
 
 	pSummary := widgets.NewParagraph()
-	summaryTitle := fmt.Sprintf(" %s, consensus v%s", chainId, consensusVersion)
+	summaryTitle := fmt.Sprintf(" %s, tm v%s", chainId, consensusVersion)
 	if len(moniker) > 0 {
 		summaryTitle += fmt.Sprintf(", %s", moniker)
 	}
@@ -237,8 +237,13 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 			preVotedCount := totalVoteCount
 			preCommitVotedCount := totalVoteCount
 			for i := 0; i < terminalColumnsCount; i++ {
-				lists[i].Rows = make([]string, rowsCount)
+				lists[i].Rows = make([]string, rowsCount+1)
+
+				lists[i].Rows[0] = fmt.Sprintf("%-3s %-3s %-4s %-3s %-6s %-15s ", "PV", "PC", "Hash", "Ord", "VPwr", "Moniker")
+
 				for j, voter := range batches[i] {
+					rowIndex := j + 1
+
 					var preVote, preCommitVote string
 
 					if voter.VotedZeroes {
@@ -265,7 +270,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 						valMoniker = valMoniker[:len([]byte(valMoniker))-len(valMoniker)]
 					}
 
-					lists[i].Rows[j] = fmt.Sprintf(
+					lists[i].Rows[rowIndex] = fmt.Sprintf(
 						"%-2s %-2s %s %-3d %s%% %-15s ",
 						preVote,
 						preCommitVote,
