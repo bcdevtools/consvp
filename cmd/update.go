@@ -5,6 +5,7 @@ import (
 	"github.com/bcdevtools/consvp/constants"
 	"github.com/bcdevtools/consvp/utils"
 	"github.com/spf13/cobra"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -22,12 +23,16 @@ var updateCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Current version: %s\n", constants.VERSION)
 		spl := strings.Split(updateCli, " ")
-		err := exec.Command(spl[0], spl[1:]...).Run()
+		bz, err := exec.Command(spl[0], spl[1:]...).Output()
 		if err != nil {
-			utils.PrintlnStdErr("Failed to update binary %s: %s\n", constants.BINARY_NAME, err)
+			utils.PrintfStdErr("Failed to update binary %s: %s\n", constants.BINARY_NAME, err)
+			if len(bz) > 0 {
+				utils.PrintlnStdErr(string(bz))
+			}
+			os.Exit(1)
 		}
 		fmt.Println("New version:")
-		bz, _ := exec.Command(constants.BINARY_NAME, "version").Output()
+		bz, _ = exec.Command(constants.BINARY_NAME, "version").Output()
 		fmt.Println(string(bz))
 	},
 }
