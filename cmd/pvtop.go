@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"log"
+	"math"
 	"os"
 	"regexp"
 	"strings"
@@ -116,6 +117,8 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	}
 }
 
+const terminalColumnsCount = 3
+
 // drawScreen render pre-vote information into screen.
 func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan interface{}, exitCallback func()) {
 	if err := ui.Init(); err != nil {
@@ -127,7 +130,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 	p := widgets.NewParagraph()
 	p.Title = fmt.Sprintf("%s, consensus v%s", chainId, consensusVersion)
 
-	lists := make([]*widgets.List, 3)
+	lists := make([]*widgets.List, terminalColumnsCount)
 	for i := range lists {
 		lists[i] = widgets.NewList()
 		lists[i].Border = false
@@ -138,14 +141,14 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 
 	grid.Set(
 		ui.NewRow(0.1,
-			ui.NewCol(1.0/3, p),
-			ui.NewCol(1.0/3, preVotePctGauge),
-			ui.NewCol(1.0/3, preCommitVotePctGauge),
+			ui.NewCol(1.0/terminalColumnsCount, p),
+			ui.NewCol(1.0/terminalColumnsCount, preVotePctGauge),
+			ui.NewCol(1.0/terminalColumnsCount, preCommitVotePctGauge),
 		),
 		ui.NewRow(0.9,
-			ui.NewCol(.9/3, lists[0]),
-			ui.NewCol(.9/3, lists[1]),
-			ui.NewCol(1.2/3, lists[2]),
+			ui.NewCol(.9/terminalColumnsCount, lists[0]),
+			ui.NewCol(.9/terminalColumnsCount, lists[1]),
+			ui.NewCol(1.2/terminalColumnsCount, lists[2]),
 		),
 	)
 	ui.Render(grid)
@@ -223,10 +226,10 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 				moniker,
 			)
 
-			split, columns, rows := splitVotes(votingInfo.SortedValidatorVoteStates)
-			for i := 0; i < columns; i++ {
-				lists[i].Rows = make([]string, rows)
-				for j, voter := range split[i] {
+			batches, rowsCount := splitVotesIntoColumnsForRendering(votingInfo.SortedValidatorVoteStates)
+			for i := 0; i < terminalColumnsCount; i++ {
+				lists[i].Rows = make([]string, rowsCount)
+				for j, voter := range batches[i] {
 					var preVote, preCommitVote string
 
 					if voter.VotedZeroes {
@@ -264,29 +267,23 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 	}
 }
 
-func splitVotes(votes []enginetypes.ValidatorVoteState) ([][]enginetypes.ValidatorVoteState, int, int) {
-	// TODO review logic
+func splitVotesIntoColumnsForRendering(votes []enginetypes.ValidatorVoteState) (batches [][]enginetypes.ValidatorVoteState, rowsCount int) {
+	rowsCount = int(math.Ceil(float64(len(votes)) / float64(terminalColumnsCount)))
 
-	batches := make([][]enginetypes.ValidatorVoteState, 0)
-	var columnsCount int
-	var rows = 50
+	batches = make([][]enginetypes.ValidatorVoteState, terminalColumnsCount)
 
-	switch {
-	case len(votes) < 50:
-		columnsCount = 1
-		batches = append(batches, votes)
-	case len(votes) < 100:
-		columnsCount = 2
-		batches = append(batches, votes[:50])
-		batches = append(batches, votes[50:])
-	default:
-		columnsCount = 3
-		rows = (len(votes) + columnsCount - 1) / 3
-		batches = append(batches, votes[:rows])
-		batches = append(batches, votes[rows:rows*2])
-		batches = append(batches, votes[rows*2:])
+	colIndex := 0
+
+	for i := 0; i < len(votes); i++ {
+		batches[colIndex] = append(batches[colIndex], votes[i])
+
+		colIndex++
+		if colIndex >= terminalColumnsCount {
+			colIndex = 0
+		}
 	}
-	return batches, columnsCount, rows
+
+	return
 }
 
 // readPvTopArg reads the argument at the given index, and returns an error if it is missing but required.
