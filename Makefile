@@ -26,7 +26,7 @@ test: go.sum
 build: go.sum
 	@echo "Compiling binary"
 	@echo "Using build flags $(BUILD_FLAGS)"
-	@go build -mod=readonly $(BUILD_FLAGS) -o build/consvpd ./cmd/consvpd
+	@go build -mod=readonly $(BUILD_FLAGS) -o build/cvp ./cmd/cvp
 	@echo "Compiled successfully, the output binary is located in build/"
 .PHONY: build
 
@@ -37,6 +37,6 @@ build: go.sum
 install: go.sum
 	@echo "Installing binary"
 	@echo "Using build flags $(BUILD_FLAGS)"
-	@go install -mod=readonly $(BUILD_FLAGS) ./cmd/consvpd
+	@go install -mod=readonly $(BUILD_FLAGS) ./cmd/cvp
 	@echo "Installed successfully"
 .PHONY: install
