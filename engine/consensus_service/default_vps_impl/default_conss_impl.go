@@ -2,18 +2,11 @@ package default_conss_impl
 
 //goland:noinspection SpellCheckingInspection
 import (
-	"encoding/base64"
 	"fmt"
 	"github.com/bcdevtools/consvp/engine/consensus_service"
-	consstypes "github.com/bcdevtools/consvp/engine/consensus_service/types"
 	"github.com/bcdevtools/consvp/engine/rpc"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
-	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
-	cryptoed25519 "github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
-	tmcrypto "github.com/tendermint/tendermint/crypto"
-	tmed25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	"sort"
 	"strings"
 	"time"
@@ -36,7 +29,7 @@ func NewDefaultConsensusServiceClientImpl(rpcClient rpc.RpcClient) *defaultConse
 // GetNextBlockVotingInformation returns the voting status of validators for the next block.
 //
 // Output voting information is sorted descending by voting power.
-func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightValidators consstypes.LightValidators) (sortedValidatorVoteStates []enginetypes.ValidatorVoteState, preVotePercent, preCommitPercent float64, heightRoundStep string, startTimeUTC time.Time, err error) {
+func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightValidators enginetypes.LightValidators) (sortedValidatorVoteStates []enginetypes.ValidatorVoteState, preVotePercent, preCommitPercent float64, heightRoundStep string, startTimeUTC time.Time, err error) {
 	if len(lightValidators) < 1 {
 		panic("light validator list is empty")
 	}
@@ -126,80 +119,6 @@ func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightV
 	sortedValidatorVoteStates = validatorVoteStates
 
 	return
-}
-
-// LightValidators returns the light list of bonded validators.
-//
-// CONTRACT: must maintain the same order as the result from the RPC server.
-func (s *defaultConsensusServiceClientImpl) LightValidators() ([]consstypes.LightValidator, error) {
-	mapper := make(map[string]*consstypes.LightValidator)
-
-	bondedVals, err := s.rpcClient.BondedValidators()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get bonded validators")
-	}
-	for _, bondedVal := range bondedVals {
-		var pubKey cryptoed25519.PubKey
-		err = proto.Unmarshal(bondedVal.ConsensusPubkey.Value, &pubKey)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to unmarshal consensus public key"))
-		}
-
-		tmPublicKey, err := cryptocodec.ToTmProtoPublicKey(&pubKey)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to cast to consensus public key"))
-		}
-
-		var tmPubKey tmcrypto.PubKey
-		tmPubKey = tmed25519.PubKey(tmPublicKey.GetEd25519())
-
-		val := consstypes.LightValidator{
-			Moniker: bondedVal.Description.Moniker,
-			Address: strings.ToUpper(tmPubKey.Address().String()),
-			PubKey:  base64.StdEncoding.EncodeToString(tmPublicKey.GetEd25519()),
-		}
-		mapper[val.Address] = &val
-	}
-
-	latestVals, err := s.rpcClient.LatestValidators()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get latest validators")
-	}
-
-	for i, latestVal := range latestVals {
-		address := strings.ToUpper(latestVal.PubKey.Address().String())
-		if val, ok := mapper[address]; ok {
-			val.Index = i
-			val.VotingPower = latestVal.VotingPower
-		}
-	}
-
-	var result consstypes.LightValidators
-	var totalVotingPower uint64
-
-	for _, val := range mapper {
-		if val.VotingPower < 1 {
-			continue
-		}
-		result = append(result, *val)
-		totalVotingPower += uint64(val.VotingPower)
-	}
-
-	for i, val := range result {
-		val.VotingPowerDisplayPercent = 100 * (float64(val.VotingPower) / float64(totalVotingPower))
-		val.VotingPowerDisplayPercent = float64(int64(val.VotingPowerDisplayPercent*100)) / 100
-		if val.VotingPower > 0 && val.VotingPowerDisplayPercent < 0.01 {
-			// avoid 0.00% for small voting power because all validators at this point, has voting power
-			val.VotingPowerDisplayPercent = 0.01
-		}
-		result[i] = val
-	}
-
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Index < result[j].Index
-	})
-
-	return result, nil
 }
 
 // Shutdown must be called when the service is no longer needed.

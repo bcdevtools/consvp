@@ -6,7 +6,7 @@ import (
 )
 
 func (suite *IntegrationTestSuite) Test_defaultConsensusServiceClientImpl_IT_GetNextBlockVotingInformation() {
-	lightVals, err := suite.SVC.LightValidators()
+	lightVals, err := suite.SVC.rpcClient.LightValidators()
 	suite.Require().NoError(err)
 	suite.Require().NotEmpty(lightVals)
 
@@ -29,27 +29,6 @@ func (suite *IntegrationTestSuite) Test_defaultConsensusServiceClientImpl_IT_Get
 		fmt.Println("Pre-commit:", val.PreCommitVoted)
 		fmt.Println("Voted zeroes:", val.VotedZeroes)
 		fmt.Println("Voting power:", val.Validator.VotingPower, "(", val.Validator.VotingPowerDisplayPercent, "%)")
-	}
-}
-
-func (suite *IntegrationTestSuite) Test_defaultConsensusServiceClientImpl_IT_LightValidators() {
-	lightVals, err := suite.SVC.LightValidators()
-	suite.Require().NoError(err)
-	suite.Require().NotEmpty(lightVals)
-
-	filledIndexes := make([]bool, len(lightVals))
-
-	for _, lightVal := range lightVals {
-		suite.NotEmpty(lightVal.Address)
-		suite.NotEmpty(lightVal.PubKey)
-		suite.Greater(lightVal.VotingPower, int64(0))
-		suite.Greater(lightVal.VotingPowerDisplayPercent, float64(0))
-
-		filledIndexes[lightVal.Index] = true
-	}
-
-	for i, isFilled := range filledIndexes {
-		suite.True(isFilled, "index %d not found", i)
 	}
 }
 
