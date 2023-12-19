@@ -13,7 +13,6 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"log"
 	"math"
 	"os"
 	"regexp"
@@ -92,6 +91,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	var lightValidators enginetypes.LightValidators
 
 	votingInfoChan := make(chan interface{}) // accept both voting info and error
+	defer close(votingInfoChan)
 
 	go drawScreen(chainId, consensusVersion, moniker, votingInfoChan, exitCallback)
 
@@ -122,7 +122,8 @@ const terminalColumnsCount = 3
 // drawScreen render pre-vote information into screen.
 func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan interface{}, exitCallback func()) {
 	if err := ui.Init(); err != nil {
-		log.Fatalf("failed to initialize termui: %v", err)
+		//goland:noinspection SpellCheckingInspection
+		utils.PrintfStdErr("failed to initialize termui: %v\n", err)
 	}
 	preVotePctGauge := widgets.NewGauge()
 	preCommitVotePctGauge := widgets.NewGauge()
