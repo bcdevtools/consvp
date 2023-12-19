@@ -9,5 +9,5 @@ const (
 	APP_INTRO      = "You are using " + APP_NAME + ", a product of bcdev.tools\nFollow us on GitHub for new tools and updates: " + GITHUB_ORG
 
 	BINARY_NAME = "consvpd"
-	VERSION     = ""
+	VERSION     = "v0.1.0"
 )
