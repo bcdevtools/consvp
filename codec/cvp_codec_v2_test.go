@@ -49,9 +49,9 @@ func Test_cvpCodecV2_EncodeDecodeStreamingLightValidators(t *testing.T) {
 			wantPanicEncode: false,
 			wantEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0b}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0b}, fssut("Val1", 20),
 				[]byte{cvpCodecV2Separator},
-				[]byte{0x0, 0x1}, []byte{0x01, 0x02}, []byte("Val2"),
+				[]byte{0x0, 0x1}, []byte{0x01, 0x02}, fssut("Val2", 20),
 			),
 			wantErrDecode: false,
 		},
@@ -67,9 +67,39 @@ func Test_cvpCodecV2_EncodeDecodeStreamingLightValidators(t *testing.T) {
 			wantPanicEncode: false,
 			wantEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0b}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0b}, fssut("Val1", 20),
 			),
 			wantErrDecode: false,
+		},
+		{
+			name: "truncate before encode then decode correct moniker UTF-8",
+			validators: []types.StreamingLightValidator{
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   "✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅",
+				},
+				{
+					Index:                     1,
+					VotingPowerDisplayPercent: 01.02,
+					Moniker:                   "❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌",
+				},
+			},
+			wantPanicEncode: false,
+			wantErrDecode:   false,
+			wantDecodedOrUseInputAsWantDecoded: []types.StreamingLightValidator{
+				// moniker of validators are truncated to max 20 bytes of runes
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   "✅✅✅✅✅✅",
+				},
+				{
+					Index:                     1,
+					VotingPowerDisplayPercent: 01.02,
+					Moniker:                   "❌❌❌❌❌❌",
+				},
+			},
 		},
 		{
 			name: "normal, validator with 100% VP",
@@ -83,7 +113,7 @@ func Test_cvpCodecV2_EncodeDecodeStreamingLightValidators(t *testing.T) {
 			wantPanicEncode: false,
 			wantEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x64, 0x00}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x64, 0x00}, fssut("Val1", 20),
 			),
 			wantErrDecode: false,
 		},
@@ -93,7 +123,7 @@ func Test_cvpCodecV2_EncodeDecodeStreamingLightValidators(t *testing.T) {
 			wantPanicEncode:       false,
 			wantEncodedData:       prefixDataEncodedByCvpCodecV2,
 			wantErrDecode:         true,
-			wantErrDecodeContains: "validator raw data too short",
+			wantErrDecodeContains: "invalid empty validator raw data",
 		},
 		{
 			name: "not accept validator negative index",
@@ -174,7 +204,7 @@ func Test_cvpCodecV2_EncodeDecodeStreamingLightValidators(t *testing.T) {
 			wantPanicEncode: false,
 			wantEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x63, 0x00}, []byte(`<he'llo">`),
+				[]byte{0x0, 0x0}, []byte{0x63, 0x00}, []byte(`<he'llo">           `),
 			),
 			wantDecodedOrUseInputAsWantDecoded: []types.StreamingLightValidator{
 				{
@@ -254,9 +284,9 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "normal, 2 validators",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, fssut("Val1", 20),
 				[]byte{cvpCodecV2Separator},
-				[]byte{0x0, 0x1}, []byte{0x01, 0x02}, []byte("Val2"),
+				[]byte{0x0, 0x1}, []byte{0x01, 0x02}, fssut("Val2", 20),
 			),
 			wantDecoded: types.StreamingLightValidators{
 				{
@@ -276,7 +306,7 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "normal, 1 validator",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, fssut("Val1", 20),
 			),
 			wantDecoded: types.StreamingLightValidators{
 				{
@@ -291,7 +321,7 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "icorrect codec version",
 			inputEncodedData: mergeBuffers(
 				[]byte{'1', cvpCodecV2Separator},
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, fssut("Val1", 20),
 			),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "bad encoding prefix",
@@ -300,7 +330,7 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "validator index can not be greater than 998",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x03, 0xE7} /*999*/, []byte{0x0a, 0x0a}, []byte("Val1"),
+				[]byte{0x03, 0xE7} /*999*/, []byte{0x0a, 0x0a}, fssut("Val1", 20),
 			),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index",
@@ -309,7 +339,7 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "voting power percent can not greater than 100",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x64, 0x01 /*100.01%*/}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x64, 0x01 /*100.01%*/}, fssut("Val1", 20),
 			),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid voting power display percent",
@@ -318,7 +348,7 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "voting power percent can not greater than 100",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x65, 0x00 /*101%*/}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x65, 0x00 /*101%*/}, fssut("Val1", 20),
 			),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid voting power display percent",
@@ -330,13 +360,13 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte("123456789012345678901"),
 			),
 			wantErrDecode:         true,
-			wantErrDecodeContains: "validator raw data too long",
+			wantErrDecodeContains: "invalid validator raw data length 25",
 		},
 		{
 			name: "bad moniker bytes",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, append([]byte("Val1"), 0x00 /*bad byte*/),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, append(fssut("Val1", 19), 0x00 /*bad byte*/),
 			),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "failed to decode moniker",
@@ -345,9 +375,9 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "bad validators index",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, fssut("Val1", 20),
 				[]byte{cvpCodecV2Separator},
-				[]byte{0x0, 0x2}, []byte{0x0a, 0x0a}, []byte("Val2"),
+				[]byte{0x0, 0x2}, []byte{0x0a, 0x0a}, fssut("Val2", 20),
 			), // index 0 jump to 2
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index sequence",
@@ -356,9 +386,9 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "bad validators index",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x1}, []byte{0x0a, 0x0a}, []byte("Val1"),
+				[]byte{0x0, 0x1}, []byte{0x0a, 0x0a}, fssut("Val1", 20),
 				[]byte{cvpCodecV2Separator},
-				[]byte{0x0, 0x2}, []byte{0x0a, 0x0a}, []byte("Val2"),
+				[]byte{0x0, 0x2}, []byte{0x0a, 0x0a}, fssut("Val2", 20),
 			), // missing index 0
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index sequence",
@@ -367,7 +397,7 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			name: "santinize moniker",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte(`<he'llo">`),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte(`<he'llo">           `),
 			),
 			wantDecoded: types.StreamingLightValidators{
 				{
@@ -379,28 +409,52 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			wantErrDecode: false,
 		},
 		{
+			name: "no moniker",
+			inputEncodedData: mergeBuffers(
+				prefixDataEncodedByCvpCodecV2,
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a},
+			),
+			wantDecoded: types.StreamingLightValidators{
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   "",
+				},
+			},
+			wantErrDecode: false,
+		},
+		{
+			name: "wrong size moniker",
+			inputEncodedData: mergeBuffers(
+				prefixDataEncodedByCvpCodecV2,
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte{0x30},
+			),
+			wantErrDecode:         true,
+			wantErrDecodeContains: "invalid validator raw data length 5",
+		},
+		{
 			name: "not accept empty validator list",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
 			),
 			wantErrDecode:         true,
-			wantErrDecodeContains: "validator raw data too short",
+			wantErrDecodeContains: "invalid empty validator raw data",
 		},
 		{
 			name: "not accept validator part with empty data",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte("Val1"),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, fssut("Val1", 20),
 				[]byte{cvpCodecV2Separator},
 			),
 			wantErrDecode:         true,
-			wantErrDecodeContains: "validator raw data too short",
+			wantErrDecodeContains: "invalid empty validator raw data",
 		},
 		{
-			name: "moniker contains separator, prefix", // TODO add testcase to v1
+			name: "moniker contains separator",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, mergeBuffers([]byte{cvpCodecV2Separator}, []byte("Val1")),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, mergeBuffers([]byte{cvpCodecV2Separator}, fssut("Val1", 19)),
 			),
 			wantDecoded: types.StreamingLightValidators{
 				{
@@ -412,76 +466,23 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			wantErrDecode: false,
 		},
 		{
-			name: "moniker contains separator, suffix", // TODO add testcase to v1
+			name: "moniker contains separator",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, mergeBuffers([]byte("Val1"), []byte{cvpCodecV2Separator}),
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, mergeBuffers([]byte{cvpCodecV2Separator}, fssut("Val1", 19)),
+				[]byte{cvpCodecV2Separator},
+				[]byte{0x0, 0x1}, []byte{0x0a, 0x0a}, mergeBuffers([]byte{cvpCodecV2Separator}, fssut("Val2", 19)),
 			),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
 					VotingPowerDisplayPercent: 10.10,
-					Moniker:                   "Val1" + string(cvpCodecV2Separator),
+					Moniker:                   string(cvpCodecV2Separator) + "Val1",
 				},
-			},
-			wantErrDecode: false,
-		},
-		{
-			name: "moniker contains separator, middle", // TODO add testcase to v1
-			inputEncodedData: mergeBuffers(
-				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, mergeBuffers([]byte("Val1"), []byte{cvpCodecV2Separator}, []byte("Val1")),
-			),
-			wantDecoded: types.StreamingLightValidators{
 				{
-					Index:                     0,
+					Index:                     1,
 					VotingPowerDisplayPercent: 10.10,
-					Moniker:                   "Val1" + string(cvpCodecV2Separator) + "Val1",
-				},
-			},
-			wantErrDecode: false,
-		},
-		{
-			name: "moniker contains separator, middle & prefix & suffix", // TODO add testcase to v1
-			inputEncodedData: mergeBuffers(
-				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, mergeBuffers([]byte{cvpCodecV2Separator}, []byte("Val1"), []byte{cvpCodecV2Separator}, []byte("Val1"), []byte{cvpCodecV2Separator}),
-			),
-			wantDecoded: types.StreamingLightValidators{
-				{
-					Index:                     0,
-					VotingPowerDisplayPercent: 10.10,
-					Moniker:                   string(cvpCodecV2Separator) + "Val1" + string(cvpCodecV2Separator) + "Val1" + string(cvpCodecV2Separator),
-				},
-			},
-			wantErrDecode: false,
-		},
-		{
-			name: "moniker contains only separator", // TODO add testcase to v1
-			inputEncodedData: mergeBuffers(
-				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte{cvpCodecV2Separator},
-			),
-			wantDecoded: types.StreamingLightValidators{
-				{
-					Index:                     0,
-					VotingPowerDisplayPercent: 10.10,
-					Moniker:                   string(cvpCodecV2Separator),
-				},
-			},
-			wantErrDecode: false,
-		},
-		{
-			name: "moniker contains only separator, multiple chars", // TODO add testcase to v1
-			inputEncodedData: mergeBuffers(
-				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, []byte{cvpCodecV2Separator, cvpCodecV2Separator},
-			),
-			wantDecoded: types.StreamingLightValidators{
-				{
-					Index:                     0,
-					VotingPowerDisplayPercent: 10.10,
-					Moniker:                   string(cvpCodecV2Separator) + string(cvpCodecV2Separator),
+					Moniker:                   string(cvpCodecV2Separator) + "Val2",
 				},
 			},
 			wantErrDecode: false,
