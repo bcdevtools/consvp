@@ -31,15 +31,11 @@ func toPercentBuffer(percent float64) []byte {
 	}
 	var pi, pf byte
 	str := fmt.Sprintf("%.2f", percent)
-	parts := strings.Split(str, ".")
-	if len(parts) != 2 {
-		pi = byte(percent)
-	} else {
-		ipi, _ := strconv.Atoi(parts[0])
-		ipf, _ := strconv.Atoi(parts[1])
-		pi = byte(ipi)
-		pf = byte(ipf)
-	}
+	parts := strings.SplitN(str, ".", 2)
+	ipi, _ := strconv.Atoi(parts[0])
+	ipf, _ := strconv.Atoi(parts[1])
+	pi = byte(ipi)
+	pf = byte(ipf)
 	return []byte{pi, pf}
 }
 
@@ -53,6 +49,9 @@ func fromPercentBuffer(bz []byte) float64 {
 func tryTakeNBytesFrom(bz []byte, fromIndex, size int) ([]byte, bool) {
 	if size < 1 {
 		panic("invalid size")
+	}
+	if fromIndex < 0 {
+		panic("invalid beginning index")
 	}
 	if fromIndex+size > len(bz) {
 		return nil, false
