@@ -18,7 +18,7 @@ var _ CvpCodec = (*cvpCodecV1)(nil)
 
 const cvpCodecV1Separator = "|"
 
-const cvpCodecV1DataPrefix = "1" + cvpCodecV1Separator
+const prefixDataEncodedByCvpCodecV1 = "1" + cvpCodecV1Separator
 
 type cvpCodecV1 struct {
 }
@@ -29,7 +29,7 @@ func getCvpCodecV1() CvpCodec {
 
 func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLightValidators) []byte {
 	var b strings.Builder
-	b.WriteString(cvpCodecV1DataPrefix)
+	b.WriteString(prefixDataEncodedByCvpCodecV1)
 
 	for i, v := range validators {
 		if i > 0 {
@@ -73,21 +73,22 @@ func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLig
 }
 
 func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLightValidators, error) {
-	if !bytes.HasPrefix(bz, []byte(cvpCodecV1DataPrefix)) {
+	if !bytes.HasPrefix(bz, []byte(prefixDataEncodedByCvpCodecV1)) {
 		return nil, fmt.Errorf("bad encoding prefix")
 	}
 
 	var validators types.StreamingLightValidators
 
 	spl := strings.Split(string(bz), cvpCodecV1Separator)
+
 	for i := 1; i < len(spl); i++ {
 		valRawData := spl[i]
 
 		if len(valRawData) < 3 /*index*/ +5 /*percent x100*/ {
-			return nil, fmt.Errorf("invalid validator data: %s", valRawData)
+			return nil, fmt.Errorf("validator raw data too short: %s", valRawData)
 		}
 		if len(valRawData) > 3 /*index*/ +5 /*percent x100*/ +40 /*moniker*/ {
-			return nil, fmt.Errorf("invalid validator data: %s", valRawData)
+			return nil, fmt.Errorf("validator raw data too long: %s", valRawData)
 		}
 
 		var validator types.StreamingLightValidator
@@ -140,7 +141,7 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 
 func (c cvpCodecV1) EncodeStreamingNextBlockVotingInformation(inf *types.StreamingNextBlockVotingInformation) []byte {
 	var b strings.Builder
-	b.WriteString(cvpCodecV1DataPrefix)
+	b.WriteString(prefixDataEncodedByCvpCodecV1)
 
 	b.WriteString(inf.HeightRoundStep)
 	b.WriteString(cvpCodecV1Separator)
@@ -195,7 +196,7 @@ func (c cvpCodecV1) EncodeStreamingNextBlockVotingInformation(inf *types.Streami
 }
 
 func (c cvpCodecV1) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types.StreamingNextBlockVotingInformation, error) {
-	if !bytes.HasPrefix(bz, []byte(cvpCodecV1DataPrefix)) {
+	if !bytes.HasPrefix(bz, []byte(prefixDataEncodedByCvpCodecV1)) {
 		return nil, fmt.Errorf("bad encoding prefix")
 	}
 
