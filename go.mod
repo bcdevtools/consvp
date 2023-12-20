@@ -3,7 +3,7 @@ module github.com/bcdevtools/consvp
 go 1.19
 
 require (
-	github.com/cosmos/cosmos-sdk v0.50.2
+	github.com/cosmos/cosmos-sdk v0.45.16
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/golang/protobuf v1.5.3
 	github.com/pkg/errors v0.9.1
