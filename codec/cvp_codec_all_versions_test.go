@@ -65,7 +65,7 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 			validators:            []types.StreamingLightValidator{},
 			wantPanicEncode:       false,
 			wantErrDecode:         true,
-			wantErrDecodeContains: "validator raw data too short",
+			wantErrDecodeContains: "invalid empty validator raw data",
 		},
 		{
 			name: "not accept validator negative index",
@@ -606,4 +606,17 @@ func Test_cvpCodecAllVersions_EncodeAndDecodeStreamingNextBlockVotingInformation
 			testHandler(cvpV2CodecImpl, t)
 		})
 	}
+}
+
+// fssut means fill suffix space chars up to X bytes.
+//
+// For testing purpose only.
+//
+//goland:noinspection SpellCheckingInspection
+func fssut(str string, upto int) []byte {
+	bz := []byte(str)
+	for len(bz) < upto {
+		bz = append(bz, ' ')
+	}
+	return bz
 }

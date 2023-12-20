@@ -86,11 +86,14 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 		const lengthOmittingMoniker = 3 /*index*/ + 5        /*percent x100*/
 		const lengthWithMoniker = lengthOmittingMoniker + 40 /*moniker*/
 
-		if len(valRawData) < lengthOmittingMoniker {
-			return nil, fmt.Errorf("validator raw data too short: %s", valRawData)
-		}
-		if len(valRawData) > lengthWithMoniker {
-			return nil, fmt.Errorf("validator raw data too long: %s", valRawData)
+		if len(valRawData) == 0 {
+			return nil, fmt.Errorf("invalid empty validator raw data")
+		} else if len(valRawData) == lengthOmittingMoniker {
+			// OK
+		} else if len(valRawData) == lengthWithMoniker {
+			// OK
+		} else {
+			return nil, fmt.Errorf("invalid validator raw data length %d", len(valRawData))
 		}
 
 		var validator types.StreamingLightValidator
@@ -113,16 +116,12 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 			return nil, fmt.Errorf("invalid voting power display percent: %f", validator.VotingPowerDisplayPercent)
 		}
 
-		if len(valRawData) == lengthOmittingMoniker {
-			// no moniker
-		} else if len(valRawData) == lengthWithMoniker {
+		if len(valRawData) == lengthWithMoniker {
 			monikerBytes, err := hex.DecodeString(valRawData[8:])
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("failed to decode moniker: %s", valRawData[8:]))
 			}
 			validator.Moniker = strings.TrimSpace(sanitizeMoniker(string(monikerBytes)))
-		} else {
-			return nil, fmt.Errorf("invalid validator raw data length %d: %s", len(valRawData), valRawData)
 		}
 
 		validators = append(validators, validator)
