@@ -203,6 +203,7 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 		})
 	}
 
+	//goland:noinspection SpellCheckingInspection
 	testsMonikerNameContainsSeparator := []struct {
 		name     string
 		seedName string
@@ -219,9 +220,16 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 			name:     "multiple chars",
 			seedName: "aa",
 		},
+		{
+			name:     "multiple chars",
+			seedName: "abcde",
+		},
 	}
 	for _, tt := range testsMonikerNameContainsSeparator {
 		assertEncodeDecodeKeepSame := func(validators types.StreamingLightValidators, codec CvpCodec, t *testing.T) {
+			for _, validator := range validators {
+				fmt.Println("Moniker:", validator.Moniker)
+			}
 			encoded := codec.EncodeStreamingLightValidators(validators)
 			decoded, err := codec.DecodeStreamingLightValidators(encoded)
 			if err != nil {
@@ -241,6 +249,11 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 						VotingPowerDisplayPercent: 99,
 						Moniker:                   string(append([]byte{separator}, []byte(tt.seedName)...)),
 					},
+					{
+						Index:                     1,
+						VotingPowerDisplayPercent: 98,
+						Moniker:                   string(append([]byte{separator}, []byte(tt.seedName)...)),
+					},
 				},
 				codec,
 				t,
@@ -251,6 +264,11 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 					{
 						Index:                     0,
 						VotingPowerDisplayPercent: 99,
+						Moniker:                   string(append([]byte(tt.seedName), separator)),
+					},
+					{
+						Index:                     1,
+						VotingPowerDisplayPercent: 98,
 						Moniker:                   string(append([]byte(tt.seedName), separator)),
 					},
 				},
@@ -265,6 +283,11 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 						VotingPowerDisplayPercent: 99,
 						Moniker:                   string(append(append([]byte{separator}, []byte(tt.seedName)...), separator)),
 					},
+					{
+						Index:                     1,
+						VotingPowerDisplayPercent: 98,
+						Moniker:                   string(append(append([]byte{separator}, []byte(tt.seedName)...), separator)),
+					},
 				},
 				codec,
 				t,
@@ -276,6 +299,11 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 						{
 							Index:                     0,
 							VotingPowerDisplayPercent: 99,
+							Moniker:                   string(tt.seedName[0]) + string(append([]byte{separator}, []byte(tt.seedName[1:])...)),
+						},
+						{
+							Index:                     1,
+							VotingPowerDisplayPercent: 98,
 							Moniker:                   string(tt.seedName[0]) + string(append([]byte{separator}, []byte(tt.seedName[1:])...)),
 						},
 					},
@@ -295,6 +323,16 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 								return moniker
 							}(),
 						},
+						{
+							Index:                     1,
+							VotingPowerDisplayPercent: 98,
+							Moniker: func() string {
+								moniker := string(append([]byte{separator}, tt.seedName[0]))
+								moniker += string(append([]byte{separator}, []byte(tt.seedName[1:])...))
+								moniker += string(separator)
+								return moniker
+							}(),
+						},
 					},
 					codec,
 					t,
@@ -302,7 +340,7 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 			}
 		}
 		t.Run(fmt.Sprintf("%s_v1", tt.name), func(t *testing.T) {
-			monikerNameContainsSeparatorHandler([]byte(cvpCodecV1Separator)[0], cvpV1CodecImpl, t)
+			monikerNameContainsSeparatorHandler(cvpCodecV1Separator[0], cvpV1CodecImpl, t)
 		})
 		t.Run(fmt.Sprintf("%s_v2", tt.name), func(t *testing.T) {
 			monikerNameContainsSeparatorHandler(cvpCodecV2Separator, cvpV2CodecImpl, t)

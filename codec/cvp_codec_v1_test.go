@@ -39,7 +39,7 @@ func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				},
 			},
 			wantPanicEncode: false,
-			wantEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1")) + "|00100102" + hex.EncodeToString([]byte("Val2"))),
+			wantEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1                ")) + "|00100102" + hex.EncodeToString([]byte("Val2                "))),
 			wantErrDecode:   false,
 		},
 		{
@@ -52,7 +52,7 @@ func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				},
 			},
 			wantPanicEncode: false,
-			wantEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1"))),
+			wantEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:   false,
 		},
 		{
@@ -65,7 +65,7 @@ func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				},
 			},
 			wantPanicEncode: false,
-			wantEncodedData: []byte("1|00010000" + hex.EncodeToString([]byte("Val1"))),
+			wantEncodedData: []byte("1|00010000" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:   false,
 		},
 		{
@@ -150,7 +150,7 @@ func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				},
 			},
 			wantPanicEncode: false,
-			wantEncodedData: []byte("1|00009900" + hex.EncodeToString([]byte(`<he'llo">`))),
+			wantEncodedData: []byte("1|00009900" + hex.EncodeToString([]byte(`<he'llo">           `))),
 			wantDecodedOrUseInputAsWantDecoded: []types.StreamingLightValidator{
 				{
 					Index:                     0,
@@ -227,7 +227,7 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 	}{
 		{
 			name:             "normal, 2 validators",
-			inputEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1")) + "|00100102" + hex.EncodeToString([]byte("Val2"))),
+			inputEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1                ")) + "|00100102" + hex.EncodeToString([]byte("Val2                "))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -244,7 +244,7 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:             "normal, 1 validator",
-			inputEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData: []byte("1|00001010" + hex.EncodeToString([]byte("Val1                "))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -256,7 +256,7 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:             "decode upper case input",
-			inputEncodedData: []byte(strings.ToUpper("1|00001010" + hex.EncodeToString([]byte("Val1")))),
+			inputEncodedData: []byte(strings.ToUpper("1|00001010" + hex.EncodeToString([]byte("Val1                ")))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -268,7 +268,7 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:             "decode lower case input",
-			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte("Val1")))),
+			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte("Val1                ")))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -280,43 +280,43 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:                  "icorrect codec version",
-			inputEncodedData:      []byte("2|00001010" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData:      []byte("2|00001010" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "bad encoding prefix",
 		},
 		{
 			name:                  "bad format validator index",
-			inputEncodedData:      []byte("1|aaa01010" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData:      []byte("1|aaa01010" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "failed to parse validator index",
 		},
 		{
 			name:                  "validator index can not be negative",
-			inputEncodedData:      []byte("1|-0101010" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData:      []byte("1|-0101010" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index",
 		},
 		{
 			name:                  "validator index can not be greater than 998",
-			inputEncodedData:      []byte("1|99901010" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData:      []byte("1|99901010" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index",
 		},
 		{
 			name:                  "bad format voting power percent x100",
-			inputEncodedData:      []byte("1|000aaaaa" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData:      []byte("1|000aaaaa" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "failed to parse voting power display percent x100",
 		},
 		{
 			name:                  "voting power percent can not be negative",
-			inputEncodedData:      []byte("1|000-0001" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData:      []byte("1|000-0001" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid voting power display percent",
 		},
 		{
 			name:                  "voting power percent can not greater than 100",
-			inputEncodedData:      []byte("1|00010001" + hex.EncodeToString([]byte("Val1"))),
+			inputEncodedData:      []byte("1|00010001" + hex.EncodeToString([]byte("Val1                "))),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid voting power display percent",
 		},
@@ -328,25 +328,25 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:                  "bad moniker bytes",
-			inputEncodedData:      []byte("1|00001010" + "ZZ"),
+			inputEncodedData:      []byte("1|00001010" + hex.EncodeToString([]byte("1234567890123456789")) + "ZZ"),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "failed to decode moniker",
 		},
 		{
 			name:                  "bad validators index",
-			inputEncodedData:      []byte("1|00001010" + hex.EncodeToString([]byte("Val1")) + "|00200102" + hex.EncodeToString([]byte("Val2"))), // index 0 jump to 2
+			inputEncodedData:      []byte("1|00001010" + hex.EncodeToString([]byte("Val1                ")) + "|00200102" + hex.EncodeToString([]byte("Val2                "))), // index 0 jump to 2
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index sequence",
 		},
 		{
 			name:                  "bad validators index",
-			inputEncodedData:      []byte("1|00101010" + hex.EncodeToString([]byte("Val1")) + "|00200102" + hex.EncodeToString([]byte("Val2"))), // missing index 0
+			inputEncodedData:      []byte("1|00101010" + hex.EncodeToString([]byte("Val1                ")) + "|00200102" + hex.EncodeToString([]byte("Val2                "))), // missing index 0
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index sequence",
 		},
 		{
 			name:             "santinize moniker",
-			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte(`<he'llo">`)))),
+			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte(`<he'llo">           `)))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -357,6 +357,24 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 			wantErrDecode: false,
 		},
 		{
+			name:             "no moniker",
+			inputEncodedData: []byte("1|00001010"),
+			wantDecoded: types.StreamingLightValidators{
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   "",
+				},
+			},
+			wantErrDecode: false,
+		},
+		{
+			name:                  "wrong size moniker",
+			inputEncodedData:      []byte("1|0000101030"),
+			wantErrDecode:         true,
+			wantErrDecodeContains: "invalid validator raw data length 10:",
+		},
+		{
 			name:                  "not accept empty validator list",
 			inputEncodedData:      []byte("1|"),
 			wantErrDecode:         true,
@@ -364,9 +382,38 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:                  "not accept validator part with empty data",
-			inputEncodedData:      []byte("1|00001010" + hex.EncodeToString([]byte("Val1")) + "|"),
+			inputEncodedData:      []byte("1|00001010" + hex.EncodeToString([]byte("Val1                ")) + "|"),
 			wantErrDecode:         true,
 			wantErrDecodeContains: "validator raw data too short",
+		},
+		{
+			name:             "moniker contains separator",
+			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte(cvpCodecV1Separator+`Val1               `)))),
+			wantDecoded: types.StreamingLightValidators{
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   cvpCodecV1Separator + "Val1",
+				},
+			},
+			wantErrDecode: false,
+		},
+		{
+			name:             "moniker contains separator",
+			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte(cvpCodecV1Separator+`Val1               `)) + cvpCodecV1Separator + "00101010" + hex.EncodeToString([]byte(cvpCodecV1Separator+`Val2               `)))),
+			wantDecoded: types.StreamingLightValidators{
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   cvpCodecV1Separator + "Val1",
+				},
+				{
+					Index:                     1,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   cvpCodecV1Separator + "Val2",
+				},
+			},
+			wantErrDecode: false,
 		},
 	}
 	for _, tt := range tests {

@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bcdevtools/consvp/types"
+	"github.com/bcdevtools/consvp/utils"
 	"github.com/pkg/errors"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -53,10 +55,8 @@ func (c cvpCodecV2) EncodeStreamingLightValidators(validators types.StreamingLig
 
 		moniker := v.Moniker
 		if len(moniker) > 0 {
-			for len([]byte(moniker)) > 20 && len(moniker) > 1 {
-				moniker = moniker[:len(moniker)-1]
-			}
-			b.Write([]byte(moniker))
+			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, 20)
+			b.Write(monikerBz)
 		}
 	}
 
@@ -79,10 +79,14 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 		cursor++
 
 		valRawDataBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
-		if len(valRawDataBz) < 2 /*index*/ +2 /*percent x100*/ {
+
+		const lengthOmittingMoniker = 2 /*index*/ + 2        /*percent*/
+		const lengthWithMoniker = lengthOmittingMoniker + 20 /*moniker*/
+
+		if len(valRawDataBz) < lengthOmittingMoniker {
 			return nil, fmt.Errorf("validator raw data too short: %d", len(valRawDataBz))
 		}
-		if len(valRawDataBz) > 2 /*index*/ +2 /*percent x100*/ +40 /*moniker*/ {
+		if len(valRawDataBz) > lengthWithMoniker {
 			return nil, fmt.Errorf("validator raw data too long: %d", len(valRawDataBz))
 		}
 
@@ -118,15 +122,15 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 
 		cursor += 2
 
-		monikerBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
-		if len(monikerBz) > 0 {
-			if len(monikerBz) > 20 {
-				return nil, fmt.Errorf("validator raw data too long: moniker buffer size %d excess limit", len(monikerBz))
-			}
-
-			validator.Moniker = sanitizeMoniker(string(monikerBz))
+		if len(valRawDataBz) == lengthOmittingMoniker {
+			// no moniker
+		} else if len(valRawDataBz) == lengthWithMoniker {
+			monikerBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
+			validator.Moniker = strings.TrimSpace(sanitizeMoniker(string(monikerBz)))
 
 			cursor += len(monikerBz)
+		} else {
+			return nil, fmt.Errorf("invalid validator raw data length %d: %s", len(valRawDataBz), valRawDataBz)
 		}
 
 		validators = append(validators, validator)

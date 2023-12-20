@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bcdevtools/consvp/types"
+	"github.com/bcdevtools/consvp/utils"
 	"github.com/pkg/errors"
 	"sort"
 	"strconv"
@@ -62,10 +63,8 @@ func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLig
 
 		moniker := v.Moniker
 		if len(moniker) > 0 {
-			for len([]byte(moniker)) > 20 && len(moniker) > 1 {
-				moniker = moniker[:len(moniker)-1]
-			}
-			b.WriteString(hex.EncodeToString([]byte(moniker)))
+			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, 20)
+			b.WriteString(hex.EncodeToString(monikerBz))
 		}
 	}
 
@@ -84,10 +83,13 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 	for i := 1; i < len(spl); i++ {
 		valRawData := spl[i]
 
-		if len(valRawData) < 3 /*index*/ +5 /*percent x100*/ {
+		const lengthOmittingMoniker = 3 /*index*/ + 5        /*percent x100*/
+		const lengthWithMoniker = lengthOmittingMoniker + 40 /*moniker*/
+
+		if len(valRawData) < lengthOmittingMoniker {
 			return nil, fmt.Errorf("validator raw data too short: %s", valRawData)
 		}
-		if len(valRawData) > 3 /*index*/ +5 /*percent x100*/ +40 /*moniker*/ {
+		if len(valRawData) > lengthWithMoniker {
 			return nil, fmt.Errorf("validator raw data too long: %s", valRawData)
 		}
 
@@ -111,12 +113,16 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 			return nil, fmt.Errorf("invalid voting power display percent: %f", validator.VotingPowerDisplayPercent)
 		}
 
-		if len(valRawData) > 8 {
+		if len(valRawData) == lengthOmittingMoniker {
+			// no moniker
+		} else if len(valRawData) == lengthWithMoniker {
 			monikerBytes, err := hex.DecodeString(valRawData[8:])
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("failed to decode moniker: %s", valRawData[8:]))
 			}
-			validator.Moniker = sanitizeMoniker(string(monikerBytes))
+			validator.Moniker = strings.TrimSpace(sanitizeMoniker(string(monikerBytes)))
+		} else {
+			return nil, fmt.Errorf("invalid validator raw data length %d: %s", len(valRawData), valRawData)
 		}
 
 		validators = append(validators, validator)
