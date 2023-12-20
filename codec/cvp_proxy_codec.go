@@ -32,7 +32,7 @@ func (p proxyCvpCodec) EncodeStreamingLightValidators(validators types.Streaming
 }
 
 func (p proxyCvpCodec) DecodeStreamingLightValidators(bz []byte) (types.StreamingLightValidators, error) {
-	if bytes.HasPrefix(bz, []byte(cvpCodecV1DataPrefix)) {
+	if bytes.HasPrefix(bz, []byte(prefixDataEncodedByCvpCodecV1)) {
 		return getCvpCodecV1().DecodeStreamingLightValidators(bz)
 	}
 
@@ -47,7 +47,7 @@ var regexpHeightRoundStep = regexp.MustCompile(`^\d+/\d+/\d+$`)
 var regexpPreVotedFingerprintBlockHash = regexp.MustCompile(`^[a-fA-F\d]{4}$`)
 
 func (p proxyCvpCodec) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types.StreamingNextBlockVotingInformation, error) {
-	if bytes.HasPrefix(bz, []byte(cvpCodecV1DataPrefix)) {
+	if bytes.HasPrefix(bz, []byte(prefixDataEncodedByCvpCodecV1)) {
 		return getCvpCodecV1().DecodeStreamingNextBlockVotingInformation(bz)
 	}
 

@@ -13,7 +13,7 @@ import (
 
 var cvpV1CodecImpl = getCvpCodecV1()
 
-func Test_cvpEncoderV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
+func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 	//goland:noinspection SpellCheckingInspection
 	tests := []struct {
 		name                               string
@@ -206,7 +206,7 @@ func Test_cvpEncoderV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 	}
 }
 
-func Test_cvpEncoderV1_DecodeStreamingLightValidators(t *testing.T) {
+func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 	//goland:noinspection SpellCheckingInspection
 	tests := []struct {
 		name             string
@@ -353,7 +353,7 @@ func Test_cvpEncoderV1_DecodeStreamingLightValidators(t *testing.T) {
 	}
 }
 
-func Test_cvpEncoderV1_EncodeAndDecodeStreamingNextBlockVotingInformation(t *testing.T) {
+func Test_cvpCodecV1_EncodeAndDecodeStreamingNextBlockVotingInformation(t *testing.T) {
 	//goland:noinspection SpellCheckingInspection
 	tests := []struct {
 		name                               string
@@ -629,7 +629,7 @@ func Test_cvpEncoderV1_EncodeAndDecodeStreamingNextBlockVotingInformation(t *tes
 	}
 }
 
-func Test_cvpEncoderV1_DecodeStreamingNextBlockVotingInformation(t *testing.T) {
+func Test_cvpCodecV1_DecodeStreamingNextBlockVotingInformation(t *testing.T) {
 	//goland:noinspection SpellCheckingInspection
 	tests := []struct {
 		name             string
