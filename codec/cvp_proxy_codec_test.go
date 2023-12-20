@@ -69,12 +69,15 @@ func Test_proxyCvpCodec_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				return
 			}
 			if reflect.DeepEqual(gotDecoded, tt.want) {
-				// ok, test detect v1
-				gotEncodedByV1 := cvpV1CodecImpl.EncodeStreamingLightValidators(tt.input)
-				_, errDecodeV1 := cvpProxyCodecImpl.DecodeStreamingLightValidators(gotEncodedByV1)
-				if errDecodeV1 != nil {
-					t.Errorf("proxy not forward v1 encoded data correctly, error = %v", errDecodeV1)
+				testDetect := func(codec CvpCodec) {
+					gotEncoded := codec.EncodeStreamingLightValidators(tt.input)
+					_, err := cvpProxyCodecImpl.DecodeStreamingLightValidators(gotEncoded)
+					if err != nil {
+						t.Errorf("proxy not forward %T encoded data correctly, error = %v", codec, err)
+					}
 				}
+				testDetect(cvpV1CodecImpl)
+				testDetect(cvpV2CodecImpl)
 			} else {
 				t.Errorf("DecodeStreamingLightValidators()\ngotDecoded = %v\nwant %v", gotDecoded, tt.want)
 			}
@@ -146,12 +149,15 @@ func Test_proxyCvpCodec_EncodeDecodeStreamingNextBlockVotingInformation(t *testi
 				return
 			}
 			if reflect.DeepEqual(gotDecoded, tt.input) {
-				// ok, test detect v1
-				gotEncodedByV1 := cvpV1CodecImpl.EncodeStreamingNextBlockVotingInformation(tt.input)
-				_, errDecodeV1 := cvpProxyCodecImpl.DecodeStreamingNextBlockVotingInformation(gotEncodedByV1)
-				if errDecodeV1 != nil {
-					t.Errorf("proxy not forward v1 encoded data correctly, error = %v", errDecodeV1)
+				testDetect := func(codec CvpCodec) {
+					gotEncoded := codec.EncodeStreamingNextBlockVotingInformation(tt.input)
+					_, err := cvpProxyCodecImpl.DecodeStreamingNextBlockVotingInformation(gotEncoded)
+					if err != nil {
+						t.Errorf("proxy not forward %T encoded data correctly, error = %v", codec, err)
+					}
 				}
+				testDetect(cvpV1CodecImpl)
+				testDetect(cvpV2CodecImpl)
 			} else {
 				t.Errorf("DecodeStreamingNextBlockVotingInformation()\ngotDecoded = %v\nwant %v", gotDecoded, tt.input)
 			}
