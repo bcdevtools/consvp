@@ -49,6 +49,36 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 			wantErrDecode:   false,
 		},
 		{
+			name: "truncate before encode then decode correct moniker UTF-8",
+			validators: []types.StreamingLightValidator{
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   "✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅",
+				},
+				{
+					Index:                     1,
+					VotingPowerDisplayPercent: 01.02,
+					Moniker:                   "❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌",
+				},
+			},
+			wantPanicEncode: false,
+			wantErrDecode:   false,
+			wantDecodedOrUseInputAsWantDecoded: []types.StreamingLightValidator{
+				// moniker of validators are truncated to max 20 bytes of runes
+				{
+					Index:                     0,
+					VotingPowerDisplayPercent: 10.10,
+					Moniker:                   "✅✅✅✅✅✅",
+				},
+				{
+					Index:                     1,
+					VotingPowerDisplayPercent: 01.02,
+					Moniker:                   "❌❌❌❌❌❌",
+				},
+			},
+		},
+		{
 			name: "normal, validator with 100% VP",
 			validators: []types.StreamingLightValidator{
 				{
