@@ -39,7 +39,7 @@ func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				},
 			},
 			wantPanicEncode: false,
-			wantEncodedData: []byte("1|00001010" + hex.EncodeToString(fssut("Val1", 20)) + "|00100102" + hex.EncodeToString(fssut("Val2", 20), )),
+			wantEncodedData: []byte("1|00001010" + hex.EncodeToString(fssut("Val1", 20)) + "|00100102" + hex.EncodeToString(fssut("Val2", 20))),
 			wantErrDecode:   false,
 		},
 		{
@@ -180,7 +180,7 @@ func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				},
 			},
 			wantPanicEncode: false,
-			wantEncodedData: []byte("1|00009900" + hex.EncodeToString([]byte(`<he'llo">           `))),
+			wantEncodedData: []byte("1|00009900" + hex.EncodeToString(fssut(`<he'llo">`, 20))),
 			wantDecodedOrUseInputAsWantDecoded: []types.StreamingLightValidator{
 				{
 					Index:                     0,
@@ -257,7 +257,7 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 	}{
 		{
 			name:             "normal, 2 validators",
-			inputEncodedData: []byte("1|00001010" + hex.EncodeToString(fssut("Val1", 20)) + "|00100102" + hex.EncodeToString(fssut("Val2", 20), )),
+			inputEncodedData: []byte("1|00001010" + hex.EncodeToString(fssut("Val1", 20)) + "|00100102" + hex.EncodeToString(fssut("Val2", 20))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -364,19 +364,19 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:                  "bad validators index",
-			inputEncodedData:      []byte("1|00001010" + hex.EncodeToString(fssut("Val1", 20)) + "|00200102" + hex.EncodeToString(fssut("Val2", 20), )), // index 0 jump to 2
+			inputEncodedData:      []byte("1|00001010" + hex.EncodeToString(fssut("Val1", 20)) + "|00200102" + hex.EncodeToString(fssut("Val2", 20))), // index 0 jump to 2
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index sequence",
 		},
 		{
 			name:                  "bad validators index",
-			inputEncodedData:      []byte("1|00101010" + hex.EncodeToString(fssut("Val1", 20)) + "|00200102" + hex.EncodeToString(fssut("Val2", 20), )), // missing index 0
+			inputEncodedData:      []byte("1|00101010" + hex.EncodeToString(fssut("Val1", 20)) + "|00200102" + hex.EncodeToString(fssut("Val2", 20))), // missing index 0
 			wantErrDecode:         true,
 			wantErrDecodeContains: "invalid validator index sequence",
 		},
 		{
 			name:             "santinize moniker",
-			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte(`<he'llo">           `)))),
+			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString(fssut(`<he'llo">`, 20)))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -418,7 +418,7 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:             "moniker contains separator",
-			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte(cvpCodecV1Separator+`Val1               `)))),
+			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString(fssut(cvpCodecV1Separator+`Val1`, 20)))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,
@@ -430,7 +430,7 @@ func Test_cvpCodecV1_DecodeStreamingLightValidators(t *testing.T) {
 		},
 		{
 			name:             "moniker contains separator",
-			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString([]byte(cvpCodecV1Separator+`Val1               `)) + cvpCodecV1Separator + "00101010" + hex.EncodeToString([]byte(cvpCodecV1Separator+`Val2               `)))),
+			inputEncodedData: []byte(strings.ToLower("1|00001010" + hex.EncodeToString(fssut(cvpCodecV1Separator+`Val1`, 20)) + cvpCodecV1Separator + "00101010" + hex.EncodeToString(fssut(cvpCodecV1Separator+`Val2`, 20)))),
 			wantDecoded: types.StreamingLightValidators{
 				{
 					Index:                     0,

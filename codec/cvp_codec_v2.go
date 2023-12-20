@@ -2,6 +2,7 @@ package codec
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"github.com/bcdevtools/consvp/types"
@@ -20,6 +21,9 @@ var _ CvpCodec = (*cvpCodecV2)(nil)
 const cvpCodecV2Separator byte = '|'
 
 var prefixDataEncodedByCvpCodecV2 = []byte{0x2, cvpCodecV2Separator}
+
+const cvpCodecV2MonikerBufferSize = 20
+const cvpCodecV2Base64EncodedMonikerBufferSize = 28
 
 type cvpCodecV2 struct {
 }
@@ -55,8 +59,8 @@ func (c cvpCodecV2) EncodeStreamingLightValidators(validators types.StreamingLig
 
 		moniker := v.Moniker
 		if len(moniker) > 0 {
-			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, 20)
-			b.Write(monikerBz)
+			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, cvpCodecV2MonikerBufferSize)
+			b.Write([]byte(base64.StdEncoding.EncodeToString(monikerBz)))
 		}
 	}
 
@@ -80,8 +84,8 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 
 		valRawDataBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
 
-		const lengthOmittingMoniker = 2 /*index*/ + 2        /*percent*/
-		const lengthWithMoniker = lengthOmittingMoniker + 20 /*moniker*/
+		const lengthOmittingMoniker = 2 /*index*/ + 2                                              /*percent*/
+		const lengthWithMoniker = lengthOmittingMoniker + cvpCodecV2Base64EncodedMonikerBufferSize /*moniker*/
 
 		if len(valRawDataBz) == 0 {
 			return nil, fmt.Errorf("invalid empty validator raw data")
@@ -126,10 +130,14 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 		cursor += 2
 
 		if len(valRawDataBz) == lengthWithMoniker {
-			monikerBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
+			bzBase64EncodedOfMonikerBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
+			monikerBz, err := base64.StdEncoding.DecodeString(string(bzBase64EncodedOfMonikerBz))
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("failed to decode base64 encoded moniker: %s", string(bzBase64EncodedOfMonikerBz)))
+			}
 			validator.Moniker = strings.TrimSpace(sanitizeMoniker(string(monikerBz)))
 
-			cursor += len(monikerBz)
+			cursor += len(bzBase64EncodedOfMonikerBz)
 		}
 
 		validators = append(validators, validator)

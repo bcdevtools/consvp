@@ -1,6 +1,7 @@
 package codec
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/bcdevtools/consvp/types"
 	"reflect"
@@ -649,4 +650,11 @@ func fssut(str string, upto int) []byte {
 		bz = append(bz, ' ')
 	}
 	return bz
+}
+
+// b64bz means base64 encode bytes and returns bytes.
+//
+// For testing purpose only.
+func b64bz(bz []byte) []byte {
+	return []byte(base64.StdEncoding.EncodeToString(bz))
 }
