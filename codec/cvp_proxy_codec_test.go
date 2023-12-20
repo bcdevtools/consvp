@@ -87,7 +87,7 @@ func Test_proxyCvpCodec_EncodeDecodeStreamingLightValidators(t *testing.T) {
 				t.Errorf("DecodeStreamingNextBlockVotingInformation() did not panic")
 			}
 		}()
-		_, _ = cvpProxyCodecImpl.DecodeStreamingLightValidators("invalid data")
+		_, _ = cvpProxyCodecImpl.DecodeStreamingLightValidators([]byte("invalid data"))
 	})
 }
 
@@ -164,6 +164,6 @@ func Test_proxyCvpCodec_EncodeDecodeStreamingNextBlockVotingInformation(t *testi
 				t.Errorf("DecodeStreamingNextBlockVotingInformation() did not panic")
 			}
 		}()
-		_, _ = cvpProxyCodecImpl.DecodeStreamingNextBlockVotingInformation("invalid data")
+		_, _ = cvpProxyCodecImpl.DecodeStreamingNextBlockVotingInformation([]byte("invalid data"))
 	})
 }

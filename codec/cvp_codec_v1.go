@@ -1,6 +1,7 @@
 package codec
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/bcdevtools/consvp/types"
@@ -16,6 +17,7 @@ import (
 var _ CvpCodec = (*cvpCodecV1)(nil)
 
 const cvpCodecV1Separator = "|"
+
 const cvpCodecV1DataPrefix = "1" + cvpCodecV1Separator
 
 type cvpCodecV1 struct {
@@ -25,7 +27,7 @@ func getCvpCodecV1() CvpCodec {
 	return cvpCodecV1{}
 }
 
-func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLightValidators) string {
+func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLightValidators) []byte {
 	var b strings.Builder
 	b.WriteString(cvpCodecV1DataPrefix)
 
@@ -67,17 +69,17 @@ func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLig
 		}
 	}
 
-	return b.String()
+	return []byte(b.String())
 }
 
-func (c cvpCodecV1) DecodeStreamingLightValidators(data string) (types.StreamingLightValidators, error) {
-	if !strings.HasPrefix(data, cvpCodecV1DataPrefix) {
+func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLightValidators, error) {
+	if !bytes.HasPrefix(bz, []byte(cvpCodecV1DataPrefix)) {
 		return nil, fmt.Errorf("bad encoding prefix")
 	}
 
 	var validators types.StreamingLightValidators
 
-	spl := strings.Split(data, cvpCodecV1Separator)
+	spl := strings.Split(string(bz), cvpCodecV1Separator)
 	for i := 1; i < len(spl); i++ {
 		valRawData := spl[i]
 
@@ -136,7 +138,7 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(data string) (types.Streaming
 	return validators, nil
 }
 
-func (c cvpCodecV1) EncodeStreamingNextBlockVotingInformation(inf *types.StreamingNextBlockVotingInformation) string {
+func (c cvpCodecV1) EncodeStreamingNextBlockVotingInformation(inf *types.StreamingNextBlockVotingInformation) []byte {
 	var b strings.Builder
 	b.WriteString(cvpCodecV1DataPrefix)
 
@@ -189,15 +191,15 @@ func (c cvpCodecV1) EncodeStreamingNextBlockVotingInformation(inf *types.Streami
 		}
 	}
 
-	return b.String()
+	return []byte(b.String())
 }
 
-func (c cvpCodecV1) DecodeStreamingNextBlockVotingInformation(data string) (*types.StreamingNextBlockVotingInformation, error) {
-	if !strings.HasPrefix(data, cvpCodecV1DataPrefix) {
+func (c cvpCodecV1) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types.StreamingNextBlockVotingInformation, error) {
+	if !bytes.HasPrefix(bz, []byte(cvpCodecV1DataPrefix)) {
 		return nil, fmt.Errorf("bad encoding prefix")
 	}
 
-	data = strings.ToUpper(data)
+	data := strings.ToUpper(string(bz))
 
 	var result types.StreamingNextBlockVotingInformation
 
