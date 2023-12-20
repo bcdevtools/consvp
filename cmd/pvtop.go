@@ -259,20 +259,14 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 						preVotedCount--
 					}
 					if voter.PreCommitVoted {
-
 						preCommitVote = "✅"
 					} else {
 						preCommitVote = "❌"
 						preCommitVotedCount--
 					}
 
-					valMoniker := voter.Validator.Moniker
-					if len([]byte(valMoniker)) > 15 {
-						valMoniker = string(append([]byte(valMoniker[:9]), []byte("...")...))
-					}
-					if len([]byte(valMoniker)) > len(valMoniker) {
-						valMoniker = valMoniker[:len([]byte(valMoniker))-len(valMoniker)]
-					}
+					valMoniker := string(utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(voter.Validator.Moniker, 15))
+					valMoniker = strings.TrimSpace(valMoniker)
 
 					lists[i].Rows[rowIndex] = fmt.Sprintf(
 						"%-2s %-2s %s %-3d %s%% %-15s ",
