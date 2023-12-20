@@ -80,14 +80,15 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 	var validators types.StreamingLightValidators
 
 	spl := strings.Split(string(bz), cvpCodecV1Separator)
+
 	for i := 1; i < len(spl); i++ {
 		valRawData := spl[i]
 
 		if len(valRawData) < 3 /*index*/ +5 /*percent x100*/ {
-			return nil, fmt.Errorf("invalid validator data: %s", valRawData)
+			return nil, fmt.Errorf("validator raw data too short: %s", valRawData)
 		}
 		if len(valRawData) > 3 /*index*/ +5 /*percent x100*/ +40 /*moniker*/ {
-			return nil, fmt.Errorf("invalid validator data: %s", valRawData)
+			return nil, fmt.Errorf("validator raw data too long: %s", valRawData)
 		}
 
 		var validator types.StreamingLightValidator
