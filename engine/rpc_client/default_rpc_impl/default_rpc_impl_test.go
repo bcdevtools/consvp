@@ -9,9 +9,10 @@ import (
 
 func TestNewDefaultRpcClient(t *testing.T) {
 	tests := []struct {
-		name      string
-		endpoint  string
-		wantError bool
+		name         string
+		endpoint     string
+		useWebSocket bool
+		wantError    bool
 	}{
 		{
 			name:      "init default (Tendermint)",
@@ -22,6 +23,18 @@ func TestNewDefaultRpcClient(t *testing.T) {
 			name:      "init default (CometBFT)",
 			endpoint:  DEFAULT_COMET_BFT_RPC_URL_FOR_TEST,
 			wantError: false,
+		},
+		{
+			name:         "init default (Tendermint) with websocket",
+			endpoint:     DEFAULT_TENDERMINT_RPC_URL_FOR_TEST,
+			useWebSocket: true,
+			wantError:    false,
+		},
+		{
+			name:         "init default (CometBFT) with websocket",
+			endpoint:     DEFAULT_COMET_BFT_RPC_URL_FOR_TEST,
+			useWebSocket: true,
+			wantError:    false,
 		},
 		{
 			name:      "bad endpoint",
@@ -48,7 +61,7 @@ func TestNewDefaultRpcClient(t *testing.T) {
 				}
 			}()
 
-			client := NewDefaultRpcClient(tt.endpoint, "", false)
+			client := NewDefaultRpcClient(tt.endpoint, "", tt.useWebSocket)
 
 			defer func() {
 				_ = client.Shutdown()
@@ -56,7 +69,11 @@ func TestNewDefaultRpcClient(t *testing.T) {
 
 			require.NotEmpty(t, string(client.endpoint))
 			require.True(t, strings.HasPrefix(string(client.endpoint), "http"))
-			require.NotNil(t, client.rpcWebsocketClient)
+			if tt.useWebSocket {
+				require.NotNil(t, client.rpcWebsocketClient)
+			} else {
+				require.Nil(t, client.rpcWebsocketClient)
+			}
 			require.NotEmpty(t, client.statusNetwork)
 			require.True(t, regexp.MustCompile("^[a-zA-Z\\d]+-\\d+$").MatchString(client.statusNetwork))
 			require.NotEmpty(t, client.statusMoniker)

@@ -1,6 +1,7 @@
 package codec
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"testing"
@@ -15,6 +16,42 @@ func Test_fromToUint16Buffer(t *testing.T) {
 			t.Errorf("n: %d, n2: %d", n1, n2)
 		}
 	}
+
+	t.Run("overflow", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		toUint16Buffer(math.MaxUint16 + 1)
+	})
+
+	t.Run("underflow", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		toUint16Buffer(-1)
+	})
+
+	t.Run("invalid buffer length", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		fromUint16Buffer([]byte{1, 2, 3})
+	})
+
+	t.Run("invalid buffer length", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		fromUint16Buffer([]byte{1})
+	})
 }
 
 func Test_fromToPercentBuffer(t *testing.T) {
@@ -28,6 +65,42 @@ func Test_fromToPercentBuffer(t *testing.T) {
 			}
 		}
 	}
+
+	t.Run("overflow", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		toPercentBuffer(100.01)
+	})
+
+	t.Run("underflow", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		toPercentBuffer(-0.01)
+	})
+
+	t.Run("invalid buffer length", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		fromPercentBuffer([]byte{1, 2, 3})
+	})
+
+	t.Run("invalid buffer length", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		fromPercentBuffer([]byte{1})
+	})
 }
 
 func Test_tryTakeNBytesFrom(t *testing.T) {
@@ -109,7 +182,7 @@ func Test_tryTakeNBytesFrom(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s_try", tt.name), func(t *testing.T) {
 			got, gotSuccess := tryTakeNBytesFrom(tt.bz, tt.fromIndex, tt.size)
 			if gotSuccess != tt.wantSuccess {
 				t.Errorf("tryTakeNBytesFrom() success = %v, want succes %v", gotSuccess, tt.wantSuccess)
@@ -119,7 +192,56 @@ func Test_tryTakeNBytesFrom(t *testing.T) {
 				}
 			}
 		})
+		t.Run(fmt.Sprintf("%s_must", tt.name), func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if (r != nil) == tt.wantSuccess {
+					t.Errorf("mustTakeNBytesFrom() success = %t, want succes %t", r == nil, tt.wantSuccess)
+				}
+			}()
+
+			got := mustTakeNBytesFrom(tt.bz, tt.fromIndex, tt.size)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("mustTakeNBytesFrom() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
+
+	t.Run("invalid size", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		tryTakeNBytesFrom([]byte{1, 2, 3}, 0, 0)
+	})
+
+	t.Run("invalid size", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		mustTakeNBytesFrom([]byte{1, 2, 3}, 0, 0)
+	})
+
+	t.Run("invalid beginning index", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		tryTakeNBytesFrom([]byte{1, 2, 3}, -1, 1)
+	})
+
+	t.Run("invalid beginning index", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expect panic")
+			}
+		}()
+		mustTakeNBytesFrom([]byte{1, 2, 3}, -1, 1)
+	})
 }
 
 func Test_takeUntilSeparatorOrEnd(t *testing.T) {

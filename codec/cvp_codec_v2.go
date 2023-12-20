@@ -3,7 +3,6 @@ package codec
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"github.com/bcdevtools/consvp/types"
 	"github.com/bcdevtools/consvp/utils"
@@ -59,8 +58,8 @@ func (c cvpCodecV2) EncodeStreamingLightValidators(validators types.StreamingLig
 
 		moniker := v.Moniker
 		if len(moniker) > 0 {
-			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, cvpCodecV2MonikerBufferSize)
-			b.Write([]byte(base64.StdEncoding.EncodeToString(monikerBz)))
+			bzMoniker := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, cvpCodecV2MonikerBufferSize)
+			b.Write([]byte(base64.StdEncoding.EncodeToString(bzMoniker)))
 		}
 	}
 
@@ -76,37 +75,26 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 
 	cursor := 1 // skipped first byte as version, starts with separator
 	for cursor < len(bz) {
-		if bz[cursor] != cvpCodecV2Separator {
-			return nil, fmt.Errorf("expect separator at %d, got 0x%s", cursor, hex.EncodeToString([]byte{bz[cursor]}))
-		}
-
 		cursor++
 
-		valRawDataBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
+		bzValRawData := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
 
 		const lengthOmittingMoniker = 2 /*index*/ + 2                                              /*percent*/
 		const lengthWithMoniker = lengthOmittingMoniker + cvpCodecV2Base64EncodedMonikerBufferSize /*moniker*/
 
-		if len(valRawDataBz) == 0 {
+		if len(bzValRawData) == 0 {
 			return nil, fmt.Errorf("invalid empty validator raw data")
-		} else if len(valRawDataBz) == lengthOmittingMoniker {
+		} else if len(bzValRawData) == lengthOmittingMoniker {
 			// OK
-		} else if len(valRawDataBz) == lengthWithMoniker {
+		} else if len(bzValRawData) == lengthWithMoniker {
 			// OK
 		} else {
-			return nil, fmt.Errorf("invalid validator raw data length %d", len(valRawDataBz))
+			return nil, fmt.Errorf("invalid validator raw data length %d", len(bzValRawData))
 		}
 
 		var validator types.StreamingLightValidator
 
-		bzIndex, takeSuccess := tryTakeNBytesFrom(bz, cursor, 2)
-		if !takeSuccess {
-			return nil, fmt.Errorf("failed to take validator index from %d of buffer", cursor)
-		}
-		if bytes.ContainsRune(bzIndex, rune(cvpCodecV2Separator)) {
-			return nil, fmt.Errorf("validator raw data too short, detected separator at buffer of validator index")
-		}
-
+		bzIndex := mustTakeNBytesFrom(bz, cursor, 2)
 		validatorIndex := fromUint16Buffer(bzIndex)
 		if validatorIndex < 0 || validatorIndex > 998 {
 			return nil, fmt.Errorf("invalid validator index: %d", validatorIndex)
@@ -115,13 +103,7 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 
 		cursor += 2
 
-		bzVotingPowerDisplayPercent, takeSuccess := tryTakeNBytesFrom(bz, cursor, 2)
-		if !takeSuccess {
-			return nil, fmt.Errorf("failed to take voting power display percent from %d of buffer", cursor)
-		}
-		if bytes.ContainsRune(bzVotingPowerDisplayPercent, rune(cvpCodecV2Separator)) {
-			return nil, fmt.Errorf("validator raw data too short, detected separator at buffer of voting power display percent")
-		}
+		bzVotingPowerDisplayPercent := mustTakeNBytesFrom(bz, cursor, 2)
 		validator.VotingPowerDisplayPercent = fromPercentBuffer(bzVotingPowerDisplayPercent)
 		if validator.VotingPowerDisplayPercent < 0 || validator.VotingPowerDisplayPercent > 100 {
 			return nil, fmt.Errorf("invalid voting power display percent: %f", validator.VotingPowerDisplayPercent)
@@ -129,15 +111,15 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 
 		cursor += 2
 
-		if len(valRawDataBz) == lengthWithMoniker {
-			bzBase64EncodedOfMonikerBz := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
-			monikerBz, err := base64.StdEncoding.DecodeString(string(bzBase64EncodedOfMonikerBz))
+		if len(bzValRawData) == lengthWithMoniker {
+			bzBase64EncodedOfBzMoniker := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
+			bzMoniker, err := base64.StdEncoding.DecodeString(string(bzBase64EncodedOfBzMoniker))
 			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("failed to decode base64 encoded moniker: %s", string(bzBase64EncodedOfMonikerBz)))
+				return nil, errors.Wrap(err, fmt.Sprintf("failed to decode base64 encoded moniker: %s", string(bzBase64EncodedOfBzMoniker)))
 			}
-			validator.Moniker = strings.TrimSpace(sanitizeMoniker(string(monikerBz)))
+			validator.Moniker = strings.TrimSpace(sanitizeMoniker(string(bzMoniker)))
 
-			cursor += len(bzBase64EncodedOfMonikerBz)
+			cursor += len(bzBase64EncodedOfBzMoniker)
 		}
 
 		validators = append(validators, validator)
@@ -230,11 +212,7 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 		return nil, fmt.Errorf("invalid height round step: %s", result.HeightRoundStep)
 	}
 
-	cursor += len(bzHeightRoundStep)
-	if bz[cursor] != cvpCodecV2Separator {
-		return nil, fmt.Errorf("expect separator at %d, got 0x%s", cursor, hex.EncodeToString([]byte{bz[cursor]}))
-	}
-	cursor += 1
+	cursor += len(bzHeightRoundStep) + 1 /*separator*/
 
 	bzDurationSec := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
 	durationSecStr := string(bzDurationSec)
@@ -247,83 +225,61 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 	}
 	result.Duration = time.Duration(durationSec) * time.Second
 
-	cursor += len(bzDurationSec)
-	if bz[cursor] != cvpCodecV2Separator {
-		return nil, fmt.Errorf("expect separator at %d, got 0x%s", cursor, hex.EncodeToString([]byte{bz[cursor]}))
-	}
-	cursor += 1
+	cursor += len(bzDurationSec) + 1 /*separator*/
 
-	bzPreVotedPercent, takeSuccess := tryTakeNBytesFrom(bz, cursor, 2)
-	if !takeSuccess {
-		return nil, fmt.Errorf("failed to take pre-voted percent from %d of buffer", cursor)
+	bzPreVotedAndPreCommitVotedPercent := takeUntilSeparatorOrEnd(bz, cursor, cvpCodecV2Separator)
+	if len(bzPreVotedAndPreCommitVotedPercent) != 4 {
+		return nil, fmt.Errorf("invalid buffer of pre-voted and pre-commit voted percent length: %d", len(bzPreVotedAndPreCommitVotedPercent))
 	}
-	if bytes.ContainsRune(bzPreVotedPercent, rune(cvpCodecV2Separator)) {
-		return nil, fmt.Errorf("pre-voted percent raw too short, detected separator at buffer of pre-voted percent")
-	}
+	bzPreVotedPercent := bzPreVotedAndPreCommitVotedPercent[:2]
 	result.PreVotedPercent = fromPercentBuffer(bzPreVotedPercent)
 	if result.PreVotedPercent < 0 || result.PreVotedPercent > 100 {
 		return nil, fmt.Errorf("invalid pre-voted percent: %f", result.PreVotedPercent)
 	}
-	cursor += 2
-
-	bzPreCommitVotedPercent, takeSuccess := tryTakeNBytesFrom(bz, cursor, 2)
-	if !takeSuccess {
-		return nil, fmt.Errorf("failed to take pre-commit voted percent from %d of buffer", cursor)
-	}
-	if bytes.ContainsRune(bzPreCommitVotedPercent, rune(cvpCodecV2Separator)) {
-		return nil, fmt.Errorf("pre-commit voted percent raw too short, detected separator at buffer of pre-commit voted percent")
-	}
+	bzPreCommitVotedPercent := bzPreVotedAndPreCommitVotedPercent[2:]
 	result.PreCommitVotedPercent = fromPercentBuffer(bzPreCommitVotedPercent)
 	if result.PreCommitVotedPercent < 0 || result.PreCommitVotedPercent > 100 {
 		return nil, fmt.Errorf("invalid pre-commit voted percent: %f", result.PreCommitVotedPercent)
 	}
-	cursor += 2
+	cursor += 4
 
-	if bz[cursor] != cvpCodecV2Separator {
-		return nil, fmt.Errorf("expect separator at %d, got 0x%s", cursor, hex.EncodeToString([]byte{bz[cursor]}))
-	}
-	cursor += 1
+	cursor += 1 // separator
 
 	if cursor >= len(bz)-1 {
 		return nil, fmt.Errorf("missing validator vote states")
 	}
 
-	validatorVoteStatesBz := bz[cursor:]
-	if len(validatorVoteStatesBz)%7 != 0 {
-		return nil, fmt.Errorf("invalid validator vote states length: %d", len(validatorVoteStatesBz))
+	bzValidatorVoteStates := bz[cursor:]
+	if len(bzValidatorVoteStates)%7 != 0 {
+		return nil, fmt.Errorf("invalid validator vote states length: %d", len(bzValidatorVoteStates))
 	}
 
 	validatorVoteStates := make([]types.StreamingValidatorVoteState, 0)
 
 	cursor = 0 // reset cursor to work on new buffer
 
-	for cursor < len(validatorVoteStatesBz) {
-		bzValidatorIndex, takeSuccess := tryTakeNBytesFrom(validatorVoteStatesBz, cursor, 2)
-		if !takeSuccess {
-			return nil, fmt.Errorf("failed to take validator index from %d of buffer", cursor)
-		}
+	for cursor < len(bzValidatorVoteStates) {
+		bzValidatorVoteState := bzValidatorVoteStates[cursor : cursor+7]
+
+		bzValidatorIndex := bzValidatorVoteState[:2]
 		validatorIndex := fromUint16Buffer(bzValidatorIndex)
 		if validatorIndex < 0 || validatorIndex > 998 {
 			return nil, fmt.Errorf("invalid validator index: %d", validatorIndex)
 		}
-		cursor += 2
 
-		bzPreVotedBlockHash, takeSuccess := tryTakeNBytesFrom(validatorVoteStatesBz, cursor, 4)
-		if !takeSuccess {
-			return nil, fmt.Errorf("failed to take pre-voted block hash from %d of buffer", cursor)
-		}
+		bzPreVotedBlockHash := bzValidatorVoteState[2:6]
 		preVotedBlockHash := string(bzPreVotedBlockHash)
 		if preVotedBlockHash != "----" {
 			if !regexpPreVotedFingerprintBlockHash.MatchString(preVotedBlockHash) {
 				return nil, fmt.Errorf("invalid pre-voted fingerprint block hash: %s, must be 2 bytes", preVotedBlockHash)
 			}
 		}
-		cursor += 4
 
 		preCommitVoted := false
 		votedZeroes := false
 		preVoted := false
-		switch validatorVoteStatesBz[cursor] {
+		voteFlag := bzValidatorVoteState[6]
+		switch voteFlag {
 		case 'C':
 			preCommitVoted = true
 			preVoted = true
@@ -334,9 +290,8 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 			preVoted = true
 		case 'X':
 		default:
-			return nil, fmt.Errorf("invalid validator vote state: %s", string(validatorVoteStatesBz[cursor]))
+			return nil, fmt.Errorf("invalid validator vote flag: %s", string(voteFlag))
 		}
-		cursor++
 
 		validatorVoteStates = append(validatorVoteStates, types.StreamingValidatorVoteState{
 			ValidatorIndex:    validatorIndex,
@@ -345,6 +300,8 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 			VotedZeroes:       votedZeroes,
 			PreCommitVoted:    preCommitVoted,
 		})
+
+		cursor += 7
 	}
 	sort.Slice(validatorVoteStates, func(i, j int) bool {
 		return validatorVoteStates[i].ValidatorIndex < validatorVoteStates[j].ValidatorIndex

@@ -1,18 +1,18 @@
 package utils
 
-func TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(s string, maxBytes int) []byte {
-	bz := []byte(s)
-	for len(bz) > maxBytes {
-		recoverRune := []rune(string(bz))
+func TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(input string, maxBytes int) []byte {
+	bzInput := []byte(input)
+	for len(bzInput) > maxBytes {
+		recoverRune := []rune(string(bzInput))
 		recoverRune = recoverRune[:len(recoverRune)-1] // remove last rune
-		bz = []byte(string(recoverRune))
+		bzInput = []byte(string(recoverRune))
 	}
-	resBz := make([]byte, maxBytes)
-	copy(resBz, bz)
+	bzOutput := make([]byte, maxBytes)
+	copy(bzOutput, bzInput)
 	for i := 0; i < maxBytes; i++ {
-		if resBz[i] == 0 {
-			resBz[i] = ' '
+		if bzOutput[i] == 0 {
+			bzOutput[i] = ' '
 		}
 	}
-	return resBz
+	return bzOutput
 }
