@@ -21,6 +21,10 @@ const cvpCodecV1Separator = "|"
 
 const prefixDataEncodedByCvpCodecV1 = "1" + cvpCodecV1Separator
 
+const cvpCodecV1MonikerBufferSize = 20
+
+const cvpCodecV1HexEncodedMonikerBufferSize = 40
+
 type cvpCodecV1 struct {
 }
 
@@ -63,7 +67,7 @@ func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLig
 
 		moniker := v.Moniker
 		if len(moniker) > 0 {
-			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, 20)
+			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, cvpCodecV1MonikerBufferSize)
 			b.WriteString(hex.EncodeToString(monikerBz))
 		}
 	}
@@ -83,8 +87,8 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 	for i := 1; i < len(spl); i++ {
 		valRawData := spl[i]
 
-		const lengthOmittingMoniker = 3 /*index*/ + 5        /*percent x100*/
-		const lengthWithMoniker = lengthOmittingMoniker + 40 /*moniker*/
+		const lengthOmittingMoniker = 3 /*index*/ + 5                                           /*percent x100*/
+		const lengthWithMoniker = lengthOmittingMoniker + cvpCodecV1HexEncodedMonikerBufferSize /*moniker buffer size to hex*/
 
 		if len(valRawData) == 0 {
 			return nil, fmt.Errorf("invalid empty validator raw data")
