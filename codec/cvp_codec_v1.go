@@ -116,12 +116,7 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 			if err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("failed to decode moniker: %s", valRawData[8:]))
 			}
-			moniker := string(monikerBytes)
-			moniker = strings.ReplaceAll(moniker, "<", "(")
-			moniker = strings.ReplaceAll(moniker, ">", ")")
-			moniker = strings.ReplaceAll(moniker, "'", "`")
-			moniker = strings.ReplaceAll(moniker, "\"", "`")
-			validator.Moniker = moniker
+			validator.Moniker = sanitizeMoniker(string(monikerBytes))
 		}
 
 		validators = append(validators, validator)
