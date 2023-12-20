@@ -67,8 +67,8 @@ func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLig
 
 		moniker := v.Moniker
 		if len(moniker) > 0 {
-			monikerBz := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, cvpCodecV1MonikerBufferSize)
-			b.WriteString(hex.EncodeToString(monikerBz))
+			bzMoniker := utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(moniker, cvpCodecV1MonikerBufferSize)
+			b.WriteString(hex.EncodeToString(bzMoniker))
 		}
 	}
 

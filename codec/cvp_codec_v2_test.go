@@ -453,6 +453,15 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			wantErrDecodeContains: "invalid empty validator raw data",
 		},
 		{
+			name: "buffer moniker is not base64",
+			inputEncodedData: mergeBuffers(
+				prefixDataEncodedByCvpCodecV2,
+				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, make([]byte, cvpCodecV2Base64EncodedMonikerBufferSize),
+			),
+			wantErrDecode:         true,
+			wantErrDecodeContains: "failed to decode base64 encoded moniker",
+		},
+		{
 			name: "moniker contains separator",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
@@ -926,6 +935,42 @@ func Test_cvpCodecV2_DecodeStreamingNextBlockVotingInformation(t *testing.T) {
 				},
 			},
 			wantErrDecode: false,
+		},
+		{
+			name: "can not take pre-voted percent due to invalid size",
+			inputEncodedData: mergeBuffers(
+				prefixDataEncodedByCvpCodecV2,
+				[]byte("1/2/3"), []byte{cvpCodecV2Separator},
+				[]byte("1"), []byte{cvpCodecV2Separator},
+				[]byte{0x01} /* 1/4 */, []byte{cvpCodecV2Separator},
+				[]byte{0x00, 0x00}, []byte("ABCD"), []byte("C"),
+			),
+			wantErrDecode:         true,
+			wantErrDecodeContains: "invalid buffer of pre-voted and pre-commit voted percent length",
+		},
+		{
+			name: "can not take pre-commit-voted percent due to invalid size",
+			inputEncodedData: mergeBuffers(
+				prefixDataEncodedByCvpCodecV2,
+				[]byte("1/2/3"), []byte{cvpCodecV2Separator},
+				[]byte("1"), []byte{cvpCodecV2Separator},
+				[]byte{0x01, 0x02} /* 2/4 */, []byte{cvpCodecV2Separator},
+				[]byte{0x00, 0x00}, []byte("ABCD"), []byte("C"),
+			),
+			wantErrDecode:         true,
+			wantErrDecodeContains: "invalid buffer of pre-voted and pre-commit voted percent length",
+		},
+		{
+			name: "can not take pre-commit-voted percent due to invalid size",
+			inputEncodedData: mergeBuffers(
+				prefixDataEncodedByCvpCodecV2,
+				[]byte("1/2/3"), []byte{cvpCodecV2Separator},
+				[]byte("1"), []byte{cvpCodecV2Separator},
+				[]byte{0x01, 0x00, 0x02} /* 3/4 */, []byte{cvpCodecV2Separator},
+				[]byte{0x00, 0x00}, []byte("ABCD"), []byte("C"),
+			),
+			wantErrDecode:         true,
+			wantErrDecodeContains: "invalid buffer of pre-voted and pre-commit voted percent length",
 		},
 		{
 			name: "icorrect codec version",

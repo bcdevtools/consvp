@@ -60,6 +60,14 @@ func tryTakeNBytesFrom(bz []byte, fromIndex, size int) ([]byte, bool) {
 	return bz[fromIndex : fromIndex+size], true
 }
 
+func mustTakeNBytesFrom(bz []byte, fromIndex, size int) []byte {
+	bz, ok := tryTakeNBytesFrom(bz, fromIndex, size)
+	if !ok {
+		panic(fmt.Errorf("failed to take %d bytes from %d", size, fromIndex))
+	}
+	return bz
+}
+
 func takeUntilSeparatorOrEnd(bz []byte, fromIndex int, separator byte) (taken []byte) {
 	for i := fromIndex; i < len(bz); i++ {
 		if bz[i] == separator {
