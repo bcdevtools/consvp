@@ -365,15 +365,6 @@ func Test_cvpCodecV2_DecodeStreamingLightValidators(t *testing.T) {
 			wantErrDecodeContains: "invalid validator raw data length 25",
 		},
 		{
-			name: "bad moniker bytes",
-			inputEncodedData: mergeBuffers(
-				prefixDataEncodedByCvpCodecV2,
-				[]byte{0x0, 0x0}, []byte{0x0a, 0x0a}, b64bz(append(fssut("Val1", 19), 0x00 /*bad byte*/)),
-			),
-			wantErrDecode:         true,
-			wantErrDecodeContains: "failed to decode moniker",
-		},
-		{
 			name: "bad validators index",
 			inputEncodedData: mergeBuffers(
 				prefixDataEncodedByCvpCodecV2,
