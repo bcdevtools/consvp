@@ -275,7 +275,8 @@ func (c cvpCodecV1) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 		preCommitVoted := false
 		votedZeroes := false
 		preVoted := false
-		switch validatorVoteStatesStr[cursor] {
+		voteFlag := validatorVoteStatesStr[cursor]
+		switch voteFlag {
 		case 'C':
 			preCommitVoted = true
 			preVoted = true
@@ -286,7 +287,7 @@ func (c cvpCodecV1) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 			preVoted = true
 		case 'X':
 		default:
-			return nil, fmt.Errorf("invalid validator vote state: %s", string(validatorVoteStatesStr[cursor]))
+			return nil, fmt.Errorf("invalid validator vote flag: %s", string(voteFlag))
 		}
 		cursor++
 

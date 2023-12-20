@@ -259,26 +259,27 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 	cursor = 0 // reset cursor to work on new buffer
 
 	for cursor < len(bzValidatorVoteStates) {
-		bzValidatorIndex := mustTakeNBytesFrom(bzValidatorVoteStates, cursor, 2)
+		bzValidatorVoteState := bzValidatorVoteStates[cursor : cursor+7]
+
+		bzValidatorIndex := bzValidatorVoteState[:2]
 		validatorIndex := fromUint16Buffer(bzValidatorIndex)
 		if validatorIndex < 0 || validatorIndex > 998 {
 			return nil, fmt.Errorf("invalid validator index: %d", validatorIndex)
 		}
-		cursor += 2
 
-		bzPreVotedBlockHash := mustTakeNBytesFrom(bzValidatorVoteStates, cursor, 4)
+		bzPreVotedBlockHash := bzValidatorVoteState[2:6]
 		preVotedBlockHash := string(bzPreVotedBlockHash)
 		if preVotedBlockHash != "----" {
 			if !regexpPreVotedFingerprintBlockHash.MatchString(preVotedBlockHash) {
 				return nil, fmt.Errorf("invalid pre-voted fingerprint block hash: %s, must be 2 bytes", preVotedBlockHash)
 			}
 		}
-		cursor += 4
 
 		preCommitVoted := false
 		votedZeroes := false
 		preVoted := false
-		switch bzValidatorVoteStates[cursor] {
+		voteFlag := bzValidatorVoteState[6]
+		switch voteFlag {
 		case 'C':
 			preCommitVoted = true
 			preVoted = true
@@ -289,9 +290,8 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 			preVoted = true
 		case 'X':
 		default:
-			return nil, fmt.Errorf("invalid validator vote state: %s", string(bzValidatorVoteStates[cursor]))
+			return nil, fmt.Errorf("invalid validator vote flag: %s", string(voteFlag))
 		}
-		cursor++
 
 		validatorVoteStates = append(validatorVoteStates, types.StreamingValidatorVoteState{
 			ValidatorIndex:    validatorIndex,
@@ -300,6 +300,8 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 			VotedZeroes:       votedZeroes,
 			PreCommitVoted:    preCommitVoted,
 		})
+
+		cursor += 7
 	}
 	sort.Slice(validatorVoteStates, func(i, j int) bool {
 		return validatorVoteStates[i].ValidatorIndex < validatorVoteStates[j].ValidatorIndex

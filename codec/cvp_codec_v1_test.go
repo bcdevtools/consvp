@@ -988,7 +988,7 @@ func Test_cvpCodecV1_DecodeStreamingNextBlockVotingInformation(t *testing.T) {
 			name:                  "bad pre-voted flag",
 			inputEncodedData:      []byte("1|1/2/3|1000|1|1|000ABCDZ"),
 			wantErrDecode:         true,
-			wantErrDecodeContains: "invalid validator vote state: Z",
+			wantErrDecodeContains: "invalid validator vote flag: Z",
 		},
 		{
 			name:                  "duplicated validator index",
