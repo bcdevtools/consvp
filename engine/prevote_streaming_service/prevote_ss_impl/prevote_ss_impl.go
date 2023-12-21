@@ -62,9 +62,12 @@ func (s *preVoteStreamingServiceImpl) OpenSession(lightValidators enginetypes.Li
 				_ = resp.Body.Close()
 			}
 		}()
-		if resp.StatusCode != http.StatusCreated {
-			return "", errors.Errorf("failed to register pre-vote streaming session, server returned status code: %d", resp.StatusCode)
+
+		err = genericHandleStatusCode(resp, http.StatusCreated, "register pre-vote streaming session")
+		if err != nil {
+			return "", err
 		}
+
 		bz, errRead := io.ReadAll(resp.Body)
 		if errRead != nil {
 			return "", errors.Wrap(errRead, "failed to read response body")
@@ -123,8 +126,10 @@ func (s *preVoteStreamingServiceImpl) ResumeSession(
 			_ = resp.Body.Close()
 		}
 	}()
-	if resp.StatusCode != http.StatusAccepted {
-		return errors.Errorf("failed to resume pre-vote streaming session, server returned status code: %d", resp.StatusCode)
+
+	err = genericHandleStatusCode(resp, http.StatusAccepted, "resume pre-vote streaming session")
+	if err != nil {
+		return err
 	}
 
 	s.sessionId = sessionId
@@ -149,10 +154,14 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 		}
 	}()
 
-	if resp.StatusCode == http.StatusOK {
-		// OK
+	return genericHandleStatusCode(resp, http.StatusOK, "broadcast pre-vote")
+}
+
+func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, actionName string) error {
+	if resp.StatusCode == acceptedStatusCode {
+		return nil
 	} else if resp.StatusCode == http.StatusBadRequest { // 400
-		return fmt.Errorf("invalid request, probably due to server side deprecated this broadcasting version, recommend to upgrade '%s'", constants.BINARY_NAME)
+		return fmt.Errorf("invalid request, probably due to server side deprecated this [%s] version, recommend to upgrade '%s'", actionName, constants.BINARY_NAME)
 	} else if resp.StatusCode == http.StatusUnauthorized { // 401
 		return fmt.Errorf("unauthorized, probably session timed out")
 	} else if resp.StatusCode == http.StatusTooManyRequests { // 429
@@ -160,16 +169,15 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 	} else if resp.StatusCode == http.StatusInternalServerError { // 500
 		return fmt.Errorf("internal server issue, please try again later")
 	} else if resp.StatusCode == http.StatusBadGateway || // 502
-		resp.StatusCode == http.StatusServiceUnavailable || // 503
-		resp.StatusCode == http.StatusGatewayTimeout { // 504
+		resp.StatusCode == http.StatusServiceUnavailable { // 503
 		return fmt.Errorf("upstream streaming server is currently unavailable, please try again later")
+	} else if resp.StatusCode == http.StatusGatewayTimeout { // 504
+		return fmt.Errorf("timed out connecting to upstream streaming server, please try again")
 	} else if resp.StatusCode == http.StatusUpgradeRequired { // 426
-		return fmt.Errorf("'%s' binary upgrade is required, probably due to server side changed broadcast behaviors and conditions", constants.BINARY_NAME)
+		return fmt.Errorf("'%s' binary upgrade is required, probably due to server side changed [%s] behaviors and conditions", constants.BINARY_NAME, actionName)
 	} else {
-		return errors.Errorf("failed to broadcast pre-vote, server returned status code: %d", resp.StatusCode)
+		return errors.Errorf("failed to [%s], server returned status code: %d", actionName, resp.StatusCode)
 	}
-
-	return nil
 }
 
 func transformLightValidatorsToStreamingLightValidators(lightValidators enginetypes.LightValidators) types.StreamingLightValidators {

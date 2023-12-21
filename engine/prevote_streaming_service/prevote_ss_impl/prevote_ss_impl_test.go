@@ -125,7 +125,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 			}(),
 			streamingServerReturnError: nil,
 			wantError:                  true,
-			wantErrorContains:          "failed to register pre-vote streaming session, server returned status code",
+			wantErrorContains:          "failed to [register pre-vote streaming session], server returned status code",
 			wantSession:                false,
 		},
 		{
@@ -351,6 +351,74 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 			}
 		}
 	})
+
+	testsPrettyErrMsg := []struct {
+		statusCode      int
+		wantErrContains string
+	}{
+		{
+			statusCode:      http.StatusBadRequest,
+			wantErrContains: "invalid request, probably due to server side deprecated this [register pre-vote streaming session] version",
+		},
+		{
+			statusCode:      http.StatusUnauthorized,
+			wantErrContains: "unauthorized, probably session timed out",
+		},
+		{
+			statusCode:      http.StatusTooManyRequests,
+			wantErrContains: "slow down",
+		},
+		{
+			statusCode:      http.StatusInternalServerError,
+			wantErrContains: "internal server issue",
+		},
+		{
+			statusCode:      http.StatusBadGateway,
+			wantErrContains: "upstream streaming server is currently unavailable",
+		},
+		{
+			statusCode:      http.StatusServiceUnavailable,
+			wantErrContains: "upstream streaming server is currently unavailable",
+		},
+		{
+			statusCode:      http.StatusGatewayTimeout,
+			wantErrContains: "timed out connecting to upstream streaming server",
+		},
+		{
+			statusCode:      http.StatusUpgradeRequired,
+			wantErrContains: "binary upgrade is required, probably due to server side changed [register pre-vote streaming session] behaviors and conditions",
+		},
+	}
+	for _, tt := range testsPrettyErrMsg {
+		suite.Run(fmt.Sprintf("when server returns %d", tt.statusCode), func() {
+			defer func() {
+				suite.Refresh() // reset all state before coming to next test
+			}()
+
+			lightValidators := enginetypes.LightValidators{
+				{
+					Index:                     0,
+					Moniker:                   "A",
+					VotingPowerDisplayPercent: 20.02,
+				},
+				{
+					Index:                     1,
+					Moniker:                   "B",
+					VotingPowerDisplayPercent: 18.81,
+				},
+			}
+
+			suite.httpClient.nextResponse = &http.Response{
+				StatusCode: tt.statusCode,
+			}
+			suite.httpClient.nextError = nil
+
+			_, err := suite.ss.OpenSession(lightValidators)
+
+			suite.Require().Error(err)
+			suite.Contains(err.Error(), tt.wantErrContains)
+		})
+	}
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Test_ExposeSessionIdAndKey() {
@@ -438,7 +506,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 			}(),
 			streamingServerReturnError: nil,
 			wantError:                  true,
-			wantErrorContains:          "failed to resume pre-vote streaming session, server returned status code",
+			wantErrorContains:          "failed to [resume pre-vote streaming session], server returned status code",
 		},
 		{
 			name: "ignore response body",
@@ -578,6 +646,61 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 		suite.Require().Error(err)
 		suite.Contains(err.Error(), "cannot resume session, because another session is currently active")
 	})
+
+	testsPrettyErrMsg := []struct {
+		statusCode      int
+		wantErrContains string
+	}{
+		{
+			statusCode:      http.StatusBadRequest,
+			wantErrContains: "invalid request, probably due to server side deprecated this [resume pre-vote streaming session] version",
+		},
+		{
+			statusCode:      http.StatusUnauthorized,
+			wantErrContains: "unauthorized, probably session timed out",
+		},
+		{
+			statusCode:      http.StatusTooManyRequests,
+			wantErrContains: "slow down",
+		},
+		{
+			statusCode:      http.StatusInternalServerError,
+			wantErrContains: "internal server issue",
+		},
+		{
+			statusCode:      http.StatusBadGateway,
+			wantErrContains: "upstream streaming server is currently unavailable",
+		},
+		{
+			statusCode:      http.StatusServiceUnavailable,
+			wantErrContains: "upstream streaming server is currently unavailable",
+		},
+		{
+			statusCode:      http.StatusGatewayTimeout,
+			wantErrContains: "timed out connecting to upstream streaming server",
+		},
+		{
+			statusCode:      http.StatusUpgradeRequired,
+			wantErrContains: "binary upgrade is required, probably due to server side changed [resume pre-vote streaming session] behaviors and conditions",
+		},
+	}
+	for _, tt := range testsPrettyErrMsg {
+		suite.Run(fmt.Sprintf("when server returns %d", tt.statusCode), func() {
+			defer func() {
+				suite.Refresh() // reset all state before coming to next test
+			}()
+
+			suite.httpClient.nextResponse = &http.Response{
+				StatusCode: tt.statusCode,
+			}
+			suite.httpClient.nextError = nil
+
+			err := suite.ss.ResumeSession(pseudoSessionId, pseudoSessionKey)
+
+			suite.Require().Error(err)
+			suite.Contains(err.Error(), tt.wantErrContains)
+		})
+	}
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
@@ -644,7 +767,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 			}(),
 			streamingServerReturnError: nil,
 			wantError:                  true,
-			wantErrorContains:          "failed to broadcast pre-vote, server returned status code",
+			wantErrorContains:          "failed to [broadcast pre-vote], server returned status code",
 		},
 		{
 			name: "when server returns error",
@@ -777,7 +900,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 	}{
 		{
 			statusCode:      http.StatusBadRequest,
-			wantErrContains: "invalid request, probably due to server side deprecated this broadcasting version",
+			wantErrContains: "invalid request, probably due to server side deprecated this [broadcast pre-vote] version",
 		},
 		{
 			statusCode:      http.StatusUnauthorized,
@@ -801,11 +924,11 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		},
 		{
 			statusCode:      http.StatusGatewayTimeout,
-			wantErrContains: "upstream streaming server is currently unavailable",
+			wantErrContains: "timed out connecting to upstream streaming server",
 		},
 		{
 			statusCode:      http.StatusUpgradeRequired,
-			wantErrContains: "binary upgrade is required, probably due to server side changed broadcast behaviors and conditions",
+			wantErrContains: "binary upgrade is required, probably due to server side changed [broadcast pre-vote] behaviors and conditions",
 		},
 	}
 	for _, tt := range testsPrettyErrMsg {
