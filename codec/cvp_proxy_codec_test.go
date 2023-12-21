@@ -3,6 +3,7 @@ package codec
 import (
 	"github.com/bcdevtools/consvp/types"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -84,13 +85,15 @@ func Test_proxyCvpCodec_EncodeDecodeStreamingLightValidators(t *testing.T) {
 		})
 	}
 
-	t.Run("want panic if decoder not able to detect encoder version", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("DecodeStreamingNextBlockVotingInformation() did not panic")
-			}
-		}()
-		_, _ = cvpProxyCodecImpl.DecodeStreamingLightValidators([]byte("invalid data"))
+	t.Run("want error if decoder not able to detect encoder version", func(t *testing.T) {
+		_, err := cvpProxyCodecImpl.DecodeStreamingLightValidators([]byte("invalid data"))
+		if err == nil {
+			t.Errorf("DecodeStreamingLightValidators() did not return error")
+			return
+		}
+		if !strings.Contains(err.Error(), "unable to detect encoder version") {
+			t.Errorf("DecodeStreamingLightValidators() error = %v, want contains %v", err, "unable to detect encoder version")
+		}
 	})
 }
 
@@ -164,12 +167,14 @@ func Test_proxyCvpCodec_EncodeDecodeStreamingNextBlockVotingInformation(t *testi
 		})
 	}
 
-	t.Run("want panic if decoder not able to detect encoder version", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("DecodeStreamingNextBlockVotingInformation() did not panic")
-			}
-		}()
-		_, _ = cvpProxyCodecImpl.DecodeStreamingNextBlockVotingInformation([]byte("invalid data"))
+	t.Run("want error if decoder not able to detect encoder version", func(t *testing.T) {
+		_, err := cvpProxyCodecImpl.DecodeStreamingNextBlockVotingInformation([]byte("invalid data"))
+		if err == nil {
+			t.Errorf("DecodeStreamingNextBlockVotingInformation() did not return error")
+			return
+		}
+		if !strings.Contains(err.Error(), "unable to detect encoder version") {
+			t.Errorf("DecodeStreamingNextBlockVotingInformation() error = %v, want contains %v", err, "unable to detect encoder version")
+		}
 	})
 }
