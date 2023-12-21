@@ -353,6 +353,48 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 	})
 }
 
+func (suite *PreVoteStreamingServiceTestSuite) Test_ExposeSessionIdAndKey() {
+	suite.Run("returns correct", func() {
+		suite.Refresh()
+
+		suite.RandomSession()
+
+		id, key := suite.ss.ExposeSessionIdAndKey()
+		suite.Equal(suite.ss.sessionId, id)
+		suite.Equal(suite.ss.sessionKey, key)
+	})
+
+	suite.Run("panic if no active session", func() {
+		suite.Refresh()
+
+		suite.Require().Panics(func() {
+			_, _ = suite.ss.ExposeSessionIdAndKey()
+		})
+	})
+
+	suite.Run("panic if missing session id", func() {
+		suite.Refresh()
+
+		suite.RandomSession()
+		suite.ss.sessionId = ""
+
+		suite.Require().Panics(func() {
+			_, _ = suite.ss.ExposeSessionIdAndKey()
+		})
+	})
+
+	suite.Run("panic if missing session key", func() {
+		suite.Refresh()
+
+		suite.RandomSession()
+		suite.ss.sessionKey = ""
+
+		suite.Require().Panics(func() {
+			_, _ = suite.ss.ExposeSessionIdAndKey()
+		})
+	})
+}
+
 func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 	pseudoSessionId, pseudoSessionKey, errGenPseudoSessionPair := enginetypes.NewPreVoteStreamingSession(suite.ss.chainId)
 	if errGenPseudoSessionPair != nil {

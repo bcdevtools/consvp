@@ -64,6 +64,9 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	useHttp := cmd.Flags().Changed(flagHttp)
 	streamingMode := cmd.Flags().Changed(flagStreaming)
 	resumeStreaming := cmd.Flags().Changed(flagResumeStreaming)
+	if resumeStreaming {
+		streamingMode = true
+	}
 
 	var rpcClient rpc_client.RpcClient
 	var consensusService conss.ConsensusService
