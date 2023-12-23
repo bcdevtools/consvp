@@ -1,11 +1,11 @@
 # ConsVP
 A simple utility for watching pre-vote status on Tendermint/CometBFT chains. It will print out the current pre-vote status for each validator in the validator set. Useful for watching pre-votes during an upgrade or other network event causing a slowdown.
-
+___
 A full rework of [pvtop](https://github.com/blockpane/pvtop) by [@blockpane](https://github.com/blockpane) and plus some miracles
-- [ ] Live streaming mode, sharing voting information to everyone
-- [x] Display Block Hash fingerprint which the validator voted on
-- [x] Allow scrolling (thanks to [@freak12techno](https://github.com/freak12techno))
-- [x] Update binary to the latest version: `cvp --update`
+- Live streaming mode, sharing voting information to everyone: `cvp --streaming`
+- Display Block Hash fingerprint which the validator voted on
+- Allow scrolling on terminal UI (thanks to [@freak12techno](https://github.com/freak12techno))
+- Update binary to the latest version: `cvp --update`
 
 ## Installation
 ```bash
