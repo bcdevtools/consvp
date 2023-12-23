@@ -27,7 +27,9 @@ type PreVoteStreamingService interface {
 	// It returns shouldStop=true if the broadcasting should be stopped.
 	BroadcastPreVote(*enginetypes.NextBlockVotingInformation) (err error, shouldStop bool)
 
+	// Stop tells the service to stop.
 	Stop()
 
+	// IsStopped returns true if the service is stopped.
 	IsStopped() bool
 }

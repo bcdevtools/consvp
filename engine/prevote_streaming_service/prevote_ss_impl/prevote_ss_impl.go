@@ -35,14 +35,6 @@ type preVoteStreamingServiceImpl struct {
 	stopped bool
 }
 
-func (s *preVoteStreamingServiceImpl) Stop() {
-	s.stopped = true
-}
-
-func (s *preVoteStreamingServiceImpl) IsStopped() bool {
-	return s.stopped
-}
-
 // NewPreVoteStreamingService creates a new PreVoteStreamingService.
 func NewPreVoteStreamingService(chainId string) ss.PreVoteStreamingService {
 	return &preVoteStreamingServiceImpl{
@@ -56,6 +48,10 @@ func NewPreVoteStreamingService(chainId string) ss.PreVoteStreamingService {
 	}
 }
 
+// OpenSession starts a new session for streaming pre-vote & pre-commit vote status.
+// It returns the URL that can be shared for others to join view.
+// Or returns error if failed on registering the session.
+// If a session had been started, it no-op and returns the URL for the existing session.
 func (s *preVoteStreamingServiceImpl) OpenSession(lightValidators enginetypes.LightValidators) (shareViewUrl string, err error) {
 	if len(s.sessionKey) < 1 {
 		var streamingLightValidators types.StreamingLightValidators
@@ -103,6 +99,7 @@ func (s *preVoteStreamingServiceImpl) OpenSession(lightValidators enginetypes.Li
 	return fmt.Sprintf("%s/%s/%s", s.httpClient.BaseUrl(), constants.STREAMING_PATH_VIEW_PRE_VOTE_PREFIX, s.sessionId), nil
 }
 
+// ExposeSessionIdAndKey returns the session ID and session key. Can be used to ResumeSession.
 func (s *preVoteStreamingServiceImpl) ExposeSessionIdAndKey() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
 	if len(s.sessionId) < 1 || len(s.sessionKey) < 1 {
 		panic("no active session found")
@@ -110,6 +107,8 @@ func (s *preVoteStreamingServiceImpl) ExposeSessionIdAndKey() (enginetypes.PreVo
 	return s.sessionId, s.sessionKey
 }
 
+// ResumeSession resumes the session with the given session ID and session key.
+// Usefully when mistakenly closed process and want to resume, without having to create a new one.
 func (s *preVoteStreamingServiceImpl) ResumeSession(
 	sessionId enginetypes.PreVoteStreamingSessionId,
 	sessionKey enginetypes.PreVoteStreamingSessionKey,
@@ -148,6 +147,9 @@ func (s *preVoteStreamingServiceImpl) ResumeSession(
 	return nil
 }
 
+// BroadcastPreVote broadcasts the given pre-vote information to all viewers.
+// It returns error if failed on broadcasting.
+// It returns shouldStop=true if the broadcasting should be stopped.
 func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.NextBlockVotingInformation) (err error, shouldStop bool) {
 	if s.stopped {
 		return fmt.Errorf("service is already marked as stopped"), true
@@ -190,6 +192,16 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 	}
 
 	return
+}
+
+// Stop tells the service to stop.
+func (s *preVoteStreamingServiceImpl) Stop() {
+	s.stopped = true
+}
+
+// IsStopped returns true if the service is stopped.
+func (s *preVoteStreamingServiceImpl) IsStopped() bool {
+	return s.stopped
 }
 
 func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, actionName string) error {

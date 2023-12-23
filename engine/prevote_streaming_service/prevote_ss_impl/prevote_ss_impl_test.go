@@ -1002,6 +1002,104 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 			suite.Equal(tt.shouldStop, shouldStop)
 		})
 	}
+
+	suite.Run("call broadcast on a stopped service", func() {
+		defer func() {
+			suite.Refresh() // reset all state before coming to next test
+		}()
+
+		suite.RandomSession()
+
+		suite.ss.Stop()
+
+		err, shouldStop := suite.ss.BroadcastPreVote(&enginetypes.NextBlockVotingInformation{})
+
+		suite.Require().Error(err)
+		suite.Contains(err.Error(), "service is already marked as stopped")
+		suite.True(shouldStop)
+	})
+}
+
+func (suite *PreVoteStreamingServiceTestSuite) Test_Stop() {
+	defer func() {
+		suite.Refresh() // reset all state before coming to next test
+	}()
+
+	suite.RandomSession()
+
+	information := &enginetypes.NextBlockVotingInformation{
+		SortedValidatorVoteStates: []enginetypes.ValidatorVoteState{
+			{
+				Validator: enginetypes.LightValidator{
+					Index:   0,
+					Moniker: "moniker",
+				},
+				VotingBlockHash: "ABCD",
+				PreVoted:        true,
+				PreCommitVoted:  true,
+			},
+		},
+		PreVotePercent:   100,
+		PreCommitPercent: 1.01,
+		HeightRoundStep:  "1/2/3",
+		StartTimeUTC:     time.Now().UTC().Add(-1 * time.Second),
+	}
+
+	suite.httpClient.nextResponse = &http.Response{
+		StatusCode:    http.StatusOK,
+		Body:          io.NopCloser(bytes.NewBuffer([]byte{})),
+		ContentLength: 0,
+	}
+	suite.httpClient.nextError = nil
+
+	suite.Run("calling Stop() should change flag", func() {
+		suite.ss.stopped = false
+
+		defer func() {
+			suite.ss.stopped = false
+		}()
+
+		suite.ss.Stop()
+		suite.Require().True(suite.ss.stopped)
+	})
+
+	suite.Run("can broadcast when service is not stopped", func() {
+		err, shouldStop := suite.ss.BroadcastPreVote(information)
+		suite.NoError(err)
+		suite.False(shouldStop)
+	})
+
+	suite.Run("can not broadcast when service is stopped", func() {
+		suite.ss.Stop()
+		suite.Require().True(suite.ss.stopped)
+
+		err, shouldStop := suite.ss.BroadcastPreVote(information)
+		if suite.Error(err) {
+			suite.Contains(err.Error(), "service is already marked as stopped")
+		}
+		suite.True(shouldStop)
+	})
+}
+
+func (suite *PreVoteStreamingServiceTestSuite) Test_IsStopped() {
+	defer func() {
+		suite.Refresh() // reset all state before coming to next test
+	}()
+
+	suite.RandomSession()
+
+	suite.Run("returns correct", func() {
+		suite.False(suite.ss.IsStopped())
+
+		suite.ss.stopped = true
+		suite.True(suite.ss.IsStopped())
+
+		suite.ss.stopped = false
+		suite.False(suite.ss.IsStopped())
+
+		suite.ss.Stop()
+		suite.True(suite.ss.IsStopped())
+	})
 }
 
 var _ io.ReadCloser = (*mockClosedReadCloser)(nil)
