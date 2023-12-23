@@ -31,6 +31,9 @@ If only a port is provided, the default host is localhost.
 func Execute() {
 	rootCmd.Flags().Bool(flagHttp, false, "use http call for rpc client instead of default is websocket")
 	rootCmd.Flags().BoolP(flagRapidRefresh, "r", false, fmt.Sprintf("refresh rate quicker, default is %v will be changed to %v", defaultRefreshInterval, rapidRefreshInterval))
+	rootCmd.Flags().BoolP(flagStreaming, "s", false, "open a live-streaming pre-vote session to be able to share the view with others.")
+	rootCmd.Flags().Bool(flagResumeStreaming, false, "resume an opened live-streaming pre-vote session to keep the current shared URL.")
+	rootCmd.Flags().BoolP(flagMockStreamingServer, "t", false, "for testing purpose only, mock a streaming server to test the streaming client.")
 
 	rootCmd.Flags().BoolP(flagVersion, "v", false, "print the binary version. WARN: This action will bypass the main command handler.")
 	rootCmd.Flags().Bool(flagLongVersion, false, fmt.Sprintf("print extra version information, must be used with --%s", flagVersion))

@@ -2,10 +2,14 @@ package cmd
 
 //goland:noinspection SpellCheckingInspection
 import (
+	"bufio"
 	"fmt"
 	"github.com/bcdevtools/consvp/constants"
 	conss "github.com/bcdevtools/consvp/engine/consensus_service"
 	dconsi "github.com/bcdevtools/consvp/engine/consensus_service/default_conss_impl"
+	pvss "github.com/bcdevtools/consvp/engine/prevote_streaming_service"
+	mpvssi "github.com/bcdevtools/consvp/engine/prevote_streaming_service/mock_local_prevote_ss_impl"
+	pvssi "github.com/bcdevtools/consvp/engine/prevote_streaming_service/prevote_ss_impl"
 	"github.com/bcdevtools/consvp/engine/rpc_client"
 	drpci "github.com/bcdevtools/consvp/engine/rpc_client/default_rpc_impl"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
@@ -23,8 +27,11 @@ import (
 )
 
 const (
-	flagHttp         = "http"
-	flagRapidRefresh = "rapid-refresh"
+	flagHttp                = "http"
+	flagRapidRefresh        = "rapid-refresh"
+	flagStreaming           = "streaming"
+	flagResumeStreaming     = "resume-streaming"
+	flagMockStreamingServer = "mock-streaming-server"
 )
 
 const defaultRefreshInterval = 3 * time.Second
@@ -56,11 +63,21 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	useHttp, _ := cmd.Flags().GetBool(flagHttp)
+	useHttp := cmd.Flags().Changed(flagHttp)
+	streamingMode := cmd.Flags().Changed(flagStreaming)
+	resumeStreaming := cmd.Flags().Changed(flagResumeStreaming)
+	if resumeStreaming {
+		streamingMode = true
+	}
+	mockStreamingServer := cmd.Flags().Changed(flagMockStreamingServer)
+	if mockStreamingServer && !streamingMode {
+		panic(fmt.Errorf("cannot mock streaming server if not in streaming mode, requires --%s or --%s", flagStreaming, flagResumeStreaming))
+	}
 
 	var rpcClient rpc_client.RpcClient
 	var consensusService conss.ConsensusService
-	exitCallback := func() {
+	var preVoteStreamingService pvss.PreVoteStreamingService
+	exitCallback1 := func() {
 		if rpcClient != nil {
 			_ = rpcClient.Shutdown()
 		}
@@ -69,17 +86,10 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	defer exitCallback()
+	defer exitCallback1()
 
 	rpcClient = drpci.NewDefaultRpcClient(consumerUrl, providerUrl, !useHttp)
 	consensusService = dconsi.NewDefaultConsensusServiceClientImpl(rpcClient)
-
-	refreshTicker := time.NewTicker(func() time.Duration {
-		if cmd.Flags().Changed(flagRapidRefresh) {
-			return rapidRefreshInterval
-		}
-		return defaultRefreshInterval
-	}())
 
 	mod5 := rand.Uint32() % 5
 	if mod5 == 0 {
@@ -90,14 +100,107 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 
 	var chainId, consensusVersion, moniker string = rpcClient.NodeInfo()
 	var lightValidators enginetypes.LightValidators
+	var preVoteStreamingShareViewUrl string
 
 	fmt.Println("Please wait, getting validators information...")
 	lightValidators, _ = rpcClient.LightValidators()
 
-	votingInfoChan := make(chan interface{}) // accept both voting info and error
-	defer close(votingInfoChan)
+	if streamingMode { // light validators is required to start a streaming session
+		for len(lightValidators) < 1 {
+			lightValidators, err = rpcClient.LightValidators()
+			if err != nil {
+				utils.PrintlnStdErr("ERR: failed to fetch light validators, waiting to retry...")
+				time.Sleep(1 * time.Second)
+			}
+		}
 
-	go drawScreen(chainId, consensusVersion, moniker, votingInfoChan, exitCallback)
+		fmt.Println("Initializing pre-vote streaming service...")
+		if mockStreamingServer {
+			preVoteStreamingService = mpvssi.NewMockLocalPreVoteStreamingService(chainId, 2*time.Minute)
+		} else {
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId)
+		}
+
+		if resumeStreaming {
+			reader := bufio.NewReader(os.Stdin)
+
+			sessionIdStr := readUntilValid(reader, "Enter session ID:", func(input string) error {
+				if len(input) < 1 {
+					return fmt.Errorf("must not be empty")
+				}
+				return enginetypes.PreVoteStreamingSessionId(input).ValidateBasic()
+			}, "bad session ID, please check")
+			sessionKeyStr := readUntilValid(reader, "Enter session key:", func(input string) error {
+				if len(input) < 1 {
+					return fmt.Errorf("must not be empty")
+				}
+				return enginetypes.PreVoteStreamingSessionKey(input).ValidateBasic()
+			}, "bad session ID, please check")
+
+			err = preVoteStreamingService.ResumeSession(enginetypes.PreVoteStreamingSessionId(sessionIdStr), enginetypes.PreVoteStreamingSessionKey(sessionKeyStr))
+			if err != nil {
+				utils.PrintlnStdErr("ERR: failed to resume streaming session id", sessionIdStr)
+				utils.PrintlnStdErr(err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Println("Registering streaming session...")
+			var errOpenSession error
+			for {
+				preVoteStreamingShareViewUrl, errOpenSession = preVoteStreamingService.OpenSession(lightValidators)
+				if errOpenSession == nil {
+					break
+				}
+
+				utils.PrintlnStdErr("ERR: failed to open streaming session, waiting to retry...")
+				time.Sleep(1 * time.Second)
+			}
+
+			fmt.Println("Streaming session registered successfully")
+			fmt.Println("use the following session ID and key to resume streaming the session if needed:")
+			sessionId, sessionKey := preVoteStreamingService.ExposeSessionIdAndKey()
+			fmt.Println("Session ID:", sessionId)
+			fmt.Println("Session Key:", sessionKey)
+
+			fmt.Println("*** Share the following URL to others to join:")
+			fmt.Println(preVoteStreamingShareViewUrl)
+			if !mockStreamingServer {
+				time.Sleep(20 * time.Second)
+			}
+		}
+	}
+
+	renderVotingInfoChan := make(chan interface{}) // accept both voting info and error
+	var broadcastingPreVoteInfoChan chan *enginetypes.NextBlockVotingInformation
+	var broadcastingStatusChan chan string
+	if streamingMode {
+		broadcastingPreVoteInfoChan = make(chan *enginetypes.NextBlockVotingInformation)
+		broadcastingStatusChan = make(chan string)
+	}
+
+	exitCallback2 := func() {
+		exitCallback1()
+		close(renderVotingInfoChan)
+		if broadcastingPreVoteInfoChan != nil {
+			close(broadcastingPreVoteInfoChan)
+		}
+		if broadcastingStatusChan != nil {
+			close(broadcastingStatusChan)
+		}
+	}
+	defer exitCallback2()
+
+	go drawScreen(chainId, consensusVersion, moniker, renderVotingInfoChan, broadcastingStatusChan, exitCallback2)
+	if streamingMode {
+		go broadcastPreVoteInfo(preVoteStreamingService, broadcastingPreVoteInfoChan, broadcastingStatusChan)
+	}
+
+	refreshTicker := time.NewTicker(func() time.Duration {
+		if cmd.Flags().Changed(flagRapidRefresh) {
+			return rapidRefreshInterval
+		}
+		return defaultRefreshInterval
+	}())
 
 	for range refreshTicker.C {
 		if len(lightValidators) < 1 {
@@ -113,18 +216,23 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 
 		nextBlockVotingInfo, err = consensusService.GetNextBlockVotingInformation(lightValidators)
 		if err != nil {
-			votingInfoChan <- errors.Wrap(err, "failed to get next block voting information")
+			renderVotingInfoChan <- errors.Wrap(err, "failed to get next block voting information")
 			continue
 		}
 
-		votingInfoChan <- nextBlockVotingInfo
+		renderVotingInfoChan <- nextBlockVotingInfo
+		if streamingMode {
+			if !preVoteStreamingService.IsStopped() { // prevent memory stacking due to no consumer
+				broadcastingPreVoteInfoChan <- nextBlockVotingInfo
+			}
+		}
 	}
 }
 
 const terminalColumnsCount = 3
 
 // drawScreen render pre-vote information into screen.
-func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan interface{}, exitCallback func()) {
+func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan interface{}, broadcastingStatusChan <-chan string, exitCallback func()) {
 	if err := ui.Init(); err != nil {
 		//goland:noinspection SpellCheckingInspection
 		utils.PrintfStdErr("failed to initialize termui: %v\n", err)
@@ -141,6 +249,9 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 	preVotePctGauge := widgets.NewGauge()
 	preCommitVotePctGauge := widgets.NewGauge()
 
+	pBroadcastStatus := widgets.NewParagraph()
+	pBroadcastStatus.Title = " Broadcast Status "
+
 	lists := make([]*widgets.List, terminalColumnsCount)
 	for i := range lists {
 		lists[i] = widgets.NewList()
@@ -150,12 +261,24 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 	termWidth, termHeight := ui.TerminalDimensions()
 	grid.SetRect(0, 0, termWidth, termHeight)
 
+	var gridHeader ui.GridItem
+	if broadcastingStatusChan != nil {
+		gridHeader = ui.NewRow(0.1,
+			ui.NewCol(1.0/4, pSummary),
+			ui.NewCol(1.0/4, pBroadcastStatus),
+			ui.NewCol(1.0/4, preVotePctGauge),
+			ui.NewCol(1.0/4, preCommitVotePctGauge),
+		)
+	} else {
+		gridHeader = ui.NewRow(0.1,
+			ui.NewCol(1.0/3, pSummary),
+			ui.NewCol(1.0/3, preVotePctGauge),
+			ui.NewCol(1.0/3, preCommitVotePctGauge),
+		)
+	}
+
 	grid.Set(
-		ui.NewRow(0.1,
-			ui.NewCol(1.0/terminalColumnsCount, pSummary),
-			ui.NewCol(1.0/terminalColumnsCount, preVotePctGauge),
-			ui.NewCol(1.0/terminalColumnsCount, preCommitVotePctGauge),
-		),
+		gridHeader,
 		ui.NewRow(0.9,
 			ui.NewCol(.96/terminalColumnsCount, lists[0]),
 			ui.NewCol(.96/terminalColumnsCount, lists[1]),
@@ -298,6 +421,43 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan chan i
 			preCommitVotePctGauge.Percent = int(votingInfo.PreCommitPercent * 100)
 
 			break
+		case broadcastStatus := <-broadcastingStatusChan:
+			refresh = true
+
+			pBroadcastStatus.Text = broadcastStatus
+
+			break
+		}
+	}
+}
+
+func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-chan *enginetypes.NextBlockVotingInformation, broadcastingStatusChan chan<- string) {
+	for {
+		select {
+		case vi := <-votingInfoChan:
+			if vi == nil {
+				panic("voting info is nil")
+			}
+
+			err, shouldStop := pvs.BroadcastPreVote(vi)
+			if shouldStop {
+				if err == nil {
+					broadcastingStatusChan <- "🔴 Broadcasting stopped"
+				} else {
+					broadcastingStatusChan <- fmt.Sprintf("🔴 Broadcasting stopped: %s", err)
+				}
+				pvs.Stop()
+				return
+			}
+
+			if err != nil {
+				broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed with reason: %s", err)
+				continue
+			}
+
+			broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress"
+
+			break
 		}
 	}
 }
@@ -339,4 +499,22 @@ func readPvTopArg(args []string, index int, optional bool) (arg string, err erro
 	}
 
 	return
+}
+
+func readUntilValid(reader *bufio.Reader, question string, validateFn func(t string) error, malformedErrMsg string) string {
+	for {
+		fmt.Println(question)
+		line, _ := reader.ReadString('\n')
+		line = strings.TrimSpace(line)
+
+		err := validateFn(line)
+		if err != nil {
+			utils.PrintfStdErr("ERR: %s\n", malformedErrMsg)
+			utils.PrintlnStdErr(err)
+			fmt.Println("----")
+			continue
+		}
+
+		return line
+	}
 }

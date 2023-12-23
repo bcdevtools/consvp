@@ -2,6 +2,7 @@ package codec
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/bcdevtools/consvp/types"
 	"regexp"
 )
@@ -40,7 +41,7 @@ func (p proxyCvpCodec) DecodeStreamingLightValidators(bz []byte) (types.Streamin
 		return getCvpCodecV1().DecodeStreamingLightValidators(bz)
 	}
 
-	panic("unable to detect encoder version")
+	return nil, fmt.Errorf("unable to detect encoder version")
 }
 
 func (p proxyCvpCodec) EncodeStreamingNextBlockVotingInformation(information *types.StreamingNextBlockVotingInformation) []byte {
@@ -58,5 +59,5 @@ func (p proxyCvpCodec) DecodeStreamingNextBlockVotingInformation(bz []byte) (*ty
 		return getCvpCodecV1().DecodeStreamingNextBlockVotingInformation(bz)
 	}
 
-	panic("unable to detect encoder version")
+	return nil, fmt.Errorf("unable to detect encoder version")
 }
