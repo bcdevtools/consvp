@@ -33,9 +33,9 @@ func versionHandler(cmd *cobra.Command, _ []string) {
 		}
 	}
 
-	fmt.Printf("%-11s %s\n", "Version:", constants.VERSION)
+	fmt.Printf("%-9s %s\n", "Version:", constants.VERSION)
 
 	if printLongVersion {
-		fmt.Printf("%-11s %s %s/%s\n", "Go:", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+		fmt.Printf("%-9s %s %s/%s\n", "Go:", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 	}
 }
