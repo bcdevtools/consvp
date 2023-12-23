@@ -13,8 +13,7 @@ const (
 
 //goland:noinspection GoSnakeCaseUsage
 const (
-	STREAMING_BASE_URL = "http://localhost:8080" // TODO use public domain
-	// STREAMING_BASE_URL = "https://cvp.bcdev.tools"
+	STREAMING_BASE_URL = "https://cvp.bcdev.tools"
 
 	STREAMING_PATH_REGISTER_PRE_VOTE_PREFIX = "register-session/pre-vote"
 	STREAMING_PATH_BROADCAST_PRE_VOTE       = "broadcast/pre-vote"
