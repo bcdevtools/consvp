@@ -18,6 +18,11 @@ go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ```bash
 cvp
 # => use http://localhost:26657
+
+# For streaming mode
+cvp http://example.com:26657 --streaming
+# or resume streaming in case of mistakenly exit
+cvp http://example.com:26657 --resume-streaming
 ```
 
 ```bash

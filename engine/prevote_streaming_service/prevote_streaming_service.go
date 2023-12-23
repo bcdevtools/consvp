@@ -23,5 +23,11 @@ type PreVoteStreamingService interface {
 	) error
 
 	// BroadcastPreVote broadcasts the given pre-vote information to all viewers.
-	BroadcastPreVote(*enginetypes.NextBlockVotingInformation) error
+	// It returns error if failed on broadcasting.
+	// It returns shouldStop=true if the broadcasting should be stopped.
+	BroadcastPreVote(*enginetypes.NextBlockVotingInformation) (err error, shouldStop bool)
+
+	Stop()
+
+	IsStopped() bool
 }

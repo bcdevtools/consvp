@@ -31,6 +31,16 @@ type preVoteStreamingServiceImpl struct {
 	codec codec.CvpCodec
 
 	httpClient preVotedStreamingHttpClient
+
+	stopped bool
+}
+
+func (s *preVoteStreamingServiceImpl) Stop() {
+	s.stopped = true
+}
+
+func (s *preVoteStreamingServiceImpl) IsStopped() bool {
+	return s.stopped
 }
 
 // NewPreVoteStreamingService creates a new PreVoteStreamingService.
@@ -138,7 +148,11 @@ func (s *preVoteStreamingServiceImpl) ResumeSession(
 	return nil
 }
 
-func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.NextBlockVotingInformation) error {
+func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.NextBlockVotingInformation) (err error, shouldStop bool) {
+	if s.stopped {
+		return fmt.Errorf("service is already marked as stopped"), true
+	}
+
 	var si *types.StreamingNextBlockVotingInformation
 	si = transformNextBlockVotingInformationToStreamingNextBlockVotingInformation(information)
 
@@ -146,7 +160,9 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 
 	resp, err := s.httpClient.BroadcastPreVote(string(s.sessionId), string(s.sessionKey), bytes.NewBuffer(encoded))
 	if err != nil {
-		return errors.Wrap(err, "failed to broadcast pre-vote")
+		err = errors.Wrap(err, "failed to broadcast pre-vote")
+		shouldStop = false
+		return
 	}
 	defer func() {
 		if resp.Body != nil {
@@ -154,7 +170,26 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 		}
 	}()
 
-	return genericHandleStatusCode(resp, http.StatusOK, "broadcast pre-vote")
+	err = genericHandleStatusCode(resp, http.StatusOK, "broadcast pre-vote")
+
+	if err != nil {
+		shouldStop = true
+		switch resp.StatusCode {
+		case http.StatusTooManyRequests: // rate limit
+			shouldStop = false
+			break
+		case http.StatusInternalServerError:
+			shouldStop = false
+			break
+		case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout: // temporary unavailable
+			shouldStop = false
+			break
+		default:
+			break
+		}
+	}
+
+	return
 }
 
 func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, actionName string) error {

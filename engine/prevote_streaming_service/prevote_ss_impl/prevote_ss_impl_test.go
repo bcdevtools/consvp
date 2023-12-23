@@ -805,7 +805,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 			suite.httpClient.nextResponse = tt.streamingServerReturnResponse
 			suite.httpClient.nextError = tt.streamingServerReturnError
 
-			err := suite.ss.BroadcastPreVote(tt.information)
+			err, _ := suite.ss.BroadcastPreVote(tt.information)
 
 			suite.NotEmpty(suite.httpClient.previousBroadcastSessionId)
 			suite.Equal(string(suite.ss.sessionId), suite.httpClient.previousBroadcastSessionId, "session ID should be passed to HTTP client")
@@ -870,7 +870,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		}
 		suite.httpClient.nextError = nil
 
-		_ = suite.ss.BroadcastPreVote(information)
+		_, _ = suite.ss.BroadcastPreVote(information)
 
 		suite.NotEmpty(suite.httpClient.previousBroadcastSessionId)
 		suite.Equal(string(suite.ss.sessionId), suite.httpClient.previousBroadcastSessionId, "session ID should be passed to HTTP client")
@@ -944,10 +944,62 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 			}
 			suite.httpClient.nextError = nil
 
-			err := suite.ss.BroadcastPreVote(&enginetypes.NextBlockVotingInformation{})
+			err, _ := suite.ss.BroadcastPreVote(&enginetypes.NextBlockVotingInformation{})
 
 			suite.Require().Error(err)
 			suite.Contains(err.Error(), tt.wantErrContains)
+		})
+	}
+
+	testRetFlagShouldStop := []struct {
+		statusCode int
+		shouldStop bool
+	}{
+		{
+			statusCode: http.StatusBadRequest,
+			shouldStop: true,
+		},
+		{
+			statusCode: http.StatusUnauthorized,
+			shouldStop: true,
+		},
+		{
+			statusCode: http.StatusTooManyRequests,
+		},
+		{
+			statusCode: http.StatusInternalServerError,
+		},
+		{
+			statusCode: http.StatusBadGateway,
+		},
+		{
+			statusCode: http.StatusServiceUnavailable,
+		},
+		{
+			statusCode: http.StatusGatewayTimeout,
+		},
+		{
+			statusCode: http.StatusUpgradeRequired,
+			shouldStop: true,
+		},
+	}
+	for _, tt := range testRetFlagShouldStop {
+		suite.Run(fmt.Sprintf("shouldStop flag when server returns %d", tt.statusCode), func() {
+			defer func() {
+				suite.Refresh() // reset all state before coming to next test
+			}()
+
+			suite.RandomSession()
+
+			suite.httpClient.nextResponse = &http.Response{
+				StatusCode: tt.statusCode,
+			}
+			suite.httpClient.nextError = nil
+
+			err, shouldStop := suite.ss.BroadcastPreVote(&enginetypes.NextBlockVotingInformation{})
+
+			suite.Require().Error(err)
+			suite.Equal(tt.shouldStop, shouldStop)
 		})
 	}
 }
