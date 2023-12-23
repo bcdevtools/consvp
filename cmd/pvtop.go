@@ -165,7 +165,9 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 			fmt.Println("*** Share the following URL to others to join:")
 			fmt.Println(preVoteStreamingShareViewUrl)
 			if !mockStreamingServer {
-				time.Sleep(20 * time.Second)
+				const sleepTime = 20 * time.Second
+				fmt.Println("Start streaming next block pre-vote information in", sleepTime, "...")
+				time.Sleep(sleepTime)
 			}
 		}
 	}
