@@ -36,14 +36,14 @@ type preVoteStreamingServiceImpl struct {
 }
 
 // NewPreVoteStreamingService creates a new PreVoteStreamingService.
-func NewPreVoteStreamingService(chainId string) ss.PreVoteStreamingService {
+func NewPreVoteStreamingService(chainId string, upstreamServerUrl string) ss.PreVoteStreamingService {
 	return &preVoteStreamingServiceImpl{
 		chainId: chainId,
 
 		codec: codec.NewProxyCvpCodec(),
 
 		httpClient: &preVotedStreamingHttpClientImpl{
-			baseUrl: constants.STREAMING_BASE_URL,
+			baseUrl: upstreamServerUrl,
 		},
 	}
 }
@@ -172,11 +172,18 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 		}
 	}()
 
-	err = genericHandleStatusCode(resp, http.StatusOK, "broadcast pre-vote")
+	if resp.StatusCode == http.StatusNotModified {
+		err = fmt.Errorf("upstream status has not changed, probably due to duplicated or outdated content")
+	} else {
+		err = genericHandleStatusCode(resp, http.StatusOK, "broadcast pre-vote")
+	}
 
 	if err != nil {
 		shouldStop = true
 		switch resp.StatusCode {
+		case http.StatusNotModified:
+			shouldStop = false
+			break
 		case http.StatusTooManyRequests: // rate limit
 			shouldStop = false
 			break
@@ -211,6 +218,8 @@ func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, action
 		return fmt.Errorf("invalid request, probably due to server side deprecated this [%s] version, recommend to upgrade '%s'", actionName, constants.BINARY_NAME)
 	} else if resp.StatusCode == http.StatusUnauthorized { // 401
 		return fmt.Errorf("unauthorized, probably session timed out")
+	} else if resp.StatusCode == http.StatusForbidden { // 403
+		return fmt.Errorf("forbidden, probably mis-match session key")
 	} else if resp.StatusCode == http.StatusTooManyRequests { // 429
 		return fmt.Errorf("slow down")
 	} else if resp.StatusCode == http.StatusInternalServerError { // 500
@@ -249,9 +258,13 @@ func transformNextBlockVotingInformationToStreamingNextBlockVotingInformation(in
 	}
 
 	for _, voteState := range information.SortedValidatorVoteStates {
+		var blockHash string
+		if len(voteState.VotingBlockHash) > 0 {
+			blockHash = voteState.VotingBlockHash[:4]
+		}
 		si.ValidatorVoteStates = append(si.ValidatorVoteStates, types.StreamingValidatorVoteState{
 			ValidatorIndex:    voteState.Validator.Index,
-			PreVotedBlockHash: voteState.VotingBlockHash,
+			PreVotedBlockHash: blockHash,
 			PreVoted:          voteState.PreVoted,
 			VotedZeroes:       voteState.VotedZeroes,
 			PreCommitVoted:    voteState.PreCommitVoted,

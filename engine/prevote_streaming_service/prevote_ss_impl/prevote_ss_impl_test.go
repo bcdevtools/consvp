@@ -365,6 +365,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 			wantErrContains: "unauthorized, probably session timed out",
 		},
 		{
+			statusCode:      http.StatusForbidden,
+			wantErrContains: "forbidden, probably mis-match session key",
+		},
+		{
 			statusCode:      http.StatusTooManyRequests,
 			wantErrContains: "slow down",
 		},
@@ -660,6 +664,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 			wantErrContains: "unauthorized, probably session timed out",
 		},
 		{
+			statusCode:      http.StatusForbidden,
+			wantErrContains: "forbidden, probably mis-match session key",
+		},
+		{
 			statusCode:      http.StatusTooManyRequests,
 			wantErrContains: "slow down",
 		},
@@ -899,6 +907,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		wantErrContains string
 	}{
 		{
+			statusCode:      http.StatusNotModified,
+			wantErrContains: "upstream status has not changed, probably due to duplicated or outdated content",
+		},
+		{
 			statusCode:      http.StatusBadRequest,
 			wantErrContains: "invalid request, probably due to server side deprecated this [broadcast pre-vote] version",
 		},
@@ -956,11 +968,18 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		shouldStop bool
 	}{
 		{
+			statusCode: http.StatusNotModified,
+		},
+		{
 			statusCode: http.StatusBadRequest,
 			shouldStop: true,
 		},
 		{
 			statusCode: http.StatusUnauthorized,
+			shouldStop: true,
+		},
+		{
+			statusCode: http.StatusForbidden,
 			shouldStop: true,
 		},
 		{

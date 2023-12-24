@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/bcdevtools/consvp/constants"
 	"github.com/bcdevtools/consvp/types"
 	"reflect"
 	"strings"
@@ -169,6 +170,21 @@ func Test_cvpCodecV2_EncodeDecodeStreamingLightValidators(t *testing.T) {
 					Moniker:                   "Val1",
 				},
 			},
+			wantPanicEncode: true,
+		},
+		{
+			name: "validator list size larger than cap",
+			validators: func() types.StreamingLightValidators {
+				var validators types.StreamingLightValidators
+				for v := 1; v <= constants.MAX_VALIDATORS+1; v++ {
+					validators = append(validators, types.StreamingLightValidator{
+						Index:                     v - 1,
+						VotingPowerDisplayPercent: 99,
+						Moniker:                   fmt.Sprintf("Val%d", v),
+					})
+				}
+				return validators
+			}(),
 			wantPanicEncode: true,
 		},
 		{
@@ -716,6 +732,26 @@ func Test_cvpCodecV2_EncodeAndDecodeStreamingNextBlockVotingInformation(t *testi
 					},
 				},
 			},
+			wantPanicEncode: true,
+		},
+		{
+			name: "panic encode if validator list size larger than cap",
+			inf: func() types.StreamingNextBlockVotingInformation {
+				inf := types.StreamingNextBlockVotingInformation{
+					HeightRoundStep:       "1/2/3",
+					Duration:              time.Second,
+					PreVotedPercent:       1,
+					PreCommitVotedPercent: 2,
+				}
+
+				for v := 1; v <= constants.MAX_VALIDATORS+1; v++ {
+					inf.ValidatorVoteStates = append(inf.ValidatorVoteStates, types.StreamingValidatorVoteState{
+						ValidatorIndex: v - 1,
+					})
+				}
+
+				return inf
+			}(),
 			wantPanicEncode: true,
 		},
 		{

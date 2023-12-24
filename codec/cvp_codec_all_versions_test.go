@@ -3,6 +3,7 @@ package codec
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/bcdevtools/consvp/constants"
 	"github.com/bcdevtools/consvp/types"
 	"reflect"
 	"strings"
@@ -140,6 +141,21 @@ func Test_cvpCodecAllVersions_EncodeDecodeStreamingLightValidators(t *testing.T)
 					Moniker:                   "Val1",
 				},
 			},
+			wantPanicEncode: true,
+		},
+		{
+			name: "validator list size larger than cap",
+			validators: func() types.StreamingLightValidators {
+				var validators types.StreamingLightValidators
+				for v := 1; v <= constants.MAX_VALIDATORS+1; v++ {
+					validators = append(validators, types.StreamingLightValidator{
+						Index:                     v - 1,
+						VotingPowerDisplayPercent: 99,
+						Moniker:                   fmt.Sprintf("Val%d", v),
+					})
+				}
+				return validators
+			}(),
 			wantPanicEncode: true,
 		},
 		{
@@ -524,6 +540,26 @@ func Test_cvpCodecAllVersions_EncodeAndDecodeStreamingNextBlockVotingInformation
 			wantPanicEncode: true,
 		},
 		{
+			name: "panic encode if validator list size larger than cap",
+			inf: func() types.StreamingNextBlockVotingInformation {
+				inf := types.StreamingNextBlockVotingInformation{
+					HeightRoundStep:       "1/2/3",
+					Duration:              time.Second,
+					PreVotedPercent:       1,
+					PreCommitVotedPercent: 2,
+				}
+
+				for v := 1; v <= constants.MAX_VALIDATORS+1; v++ {
+					inf.ValidatorVoteStates = append(inf.ValidatorVoteStates, types.StreamingValidatorVoteState{
+						ValidatorIndex: v - 1,
+					})
+				}
+
+				return inf
+			}(),
+			wantPanicEncode: true,
+		},
+		{
 			name: "panic encode if block hash length is not 0 or 4",
 			inf: types.StreamingNextBlockVotingInformation{
 				HeightRoundStep:       "1/2/3",
@@ -636,6 +672,78 @@ func Test_cvpCodecAllVersions_EncodeAndDecodeStreamingNextBlockVotingInformation
 		t.Run(fmt.Sprintf("%s_v2", tt.name), func(t *testing.T) {
 			testHandler(cvpV2CodecImpl, t)
 		})
+	}
+}
+
+func Test_cvpCodecAllVersions_LargestEncodedLightValidators(t *testing.T) {
+	validators := types.StreamingLightValidators{}
+	for v := 1; v <= constants.MAX_VALIDATORS; v++ {
+		validators = append(validators, types.StreamingLightValidator{
+			Index:                     v - 1,
+			VotingPowerDisplayPercent: 99.98,
+			Moniker:                   fmt.Sprintf("Val%d✅✅✅✅✅✅✅", v),
+		})
+	}
+	bytes := make(map[int]int)
+
+	encodedV1 := cvpV1CodecImpl.EncodeStreamingLightValidators(validators)
+	bytes[1] = len(encodedV1)
+
+	encodedV2 := cvpV2CodecImpl.EncodeStreamingLightValidators(validators)
+	bytes[2] = len(encodedV2)
+
+	var maxSize int
+	for _, size := range bytes {
+		if size > maxSize {
+			maxSize = size
+		}
+	}
+
+	if maxSize != constants.MAX_ENCODED_LIGHT_VALIDATORS_BYTES {
+		for v, size := range bytes {
+			fmt.Printf("v%d: %5d bytes\n", v, size)
+		}
+		t.Errorf("largest encoded light validators bytes = %d, want exact %d", maxSize, constants.MAX_ENCODED_LIGHT_VALIDATORS_BYTES)
+	}
+}
+
+func Test_cvpCodecAllVersions_LargestEncodedPreVoteInfo(t *testing.T) {
+	inf := types.StreamingNextBlockVotingInformation{
+		HeightRoundStep:       "999999999/9999/9999",    // very big
+		Duration:              365 * 2 * 24 * time.Hour, // very far
+		PreVotedPercent:       99.98,
+		PreCommitVotedPercent: 99.98,
+		ValidatorVoteStates:   nil,
+	}
+	for v := 1; v <= constants.MAX_VALIDATORS; v++ {
+		inf.ValidatorVoteStates = append(inf.ValidatorVoteStates, types.StreamingValidatorVoteState{
+			ValidatorIndex:    v - 1,
+			PreVotedBlockHash: "COFF",
+			PreVoted:          true,
+			VotedZeroes:       false,
+			PreCommitVoted:    true,
+		})
+	}
+	bytes := make(map[int]int)
+
+	encodedV1 := cvpV1CodecImpl.EncodeStreamingNextBlockVotingInformation(&inf)
+	bytes[1] = len(encodedV1)
+
+	encodedV2 := cvpV2CodecImpl.EncodeStreamingNextBlockVotingInformation(&inf)
+	bytes[2] = len(encodedV2)
+
+	var maxSize int
+	for _, size := range bytes {
+		if size > maxSize {
+			maxSize = size
+		}
+	}
+
+	if maxSize != constants.MAX_ENCODED_NEXT_BLOCK_PRE_VOTE_INFO_BYTES {
+		for v, size := range bytes {
+			fmt.Printf("v%d: %5d bytes\n", v, size)
+		}
+		t.Errorf("largest encoded next block pre-vote information bytes = %d, want exact %d", maxSize, constants.MAX_ENCODED_NEXT_BLOCK_PRE_VOTE_INFO_BYTES)
 	}
 }
 
