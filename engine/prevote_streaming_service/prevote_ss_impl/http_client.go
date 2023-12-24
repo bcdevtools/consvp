@@ -32,12 +32,16 @@ func (c *preVotedStreamingHttpClientImpl) RegisterPreVotedStreamingSession(chain
 	)
 }
 
-func (c *preVotedStreamingHttpClientImpl) ResumePreVotedStreamingSession(string, io.Reader) (*http.Response, error) {
-	return nil, fmt.Errorf("not implemented")
+func (c *preVotedStreamingHttpClientImpl) ResumePreVotedStreamingSession(sessionId string, body io.Reader) (*http.Response, error) {
+	return http.Post(
+		fmt.Sprintf("%s/%s/%s", c.baseUrl, constants.STREAMING_PATH_RESUME_PRE_VOTE_PREFIX, sessionId),
+		constants.STREAMING_CONTENT_TYPE,
+		body,
+	)
 }
 
 func (c *preVotedStreamingHttpClientImpl) BroadcastPreVote(sessionId, sessionKey string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/%s/%s", c.baseUrl, constants.STREAMING_PATH_BROADCAST_PRE_VOTE, sessionId), body)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/%s/%s", c.baseUrl, constants.STREAMING_PATH_BROADCAST_PRE_VOTE_PREFIX, sessionId), body)
 	if err != nil {
 		return nil, err
 	}
