@@ -69,9 +69,22 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	if resumeStreaming {
 		streamingMode = true
 	}
-	mockStreamingServer := cmd.Flags().Changed(flagMockStreamingServer)
-	if mockStreamingServer && !streamingMode {
-		panic(fmt.Errorf("cannot mock streaming server if not in streaming mode, requires --%s or --%s", flagStreaming, flagResumeStreaming))
+	mockStreamingServer, _ := cmd.Flags().GetString(flagMockStreamingServer)
+	if strings.EqualFold(mockStreamingServer, "none") {
+		mockStreamingServer = ""
+	} else if strings.EqualFold(mockStreamingServer, "mock") {
+		// valid
+	} else if strings.EqualFold(mockStreamingServer, "local") {
+		// valid
+	} else {
+		utils.PrintlnStdErr("ERR: bad mock streaming server value:", mockStreamingServer)
+		os.Exit(1)
+	}
+
+	if len(mockStreamingServer) > 0 {
+		if !streamingMode {
+			panic(fmt.Errorf("cannot mock streaming server if not in streaming mode, requires --%s or --%s", flagStreaming, flagResumeStreaming))
+		}
 	}
 
 	var rpcClient rpc_client.RpcClient
@@ -114,11 +127,18 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 			}
 		}
 
+		if len(lightValidators) > constants.MAX_VALIDATORS {
+			utils.PrintfStdErr("ERR: too many validators %d/%d, cannot start streaming session\n", len(lightValidators), constants.MAX_VALIDATORS)
+			os.Exit(1)
+		}
+
 		fmt.Println("Initializing pre-vote streaming service...")
-		if mockStreamingServer {
+		if strings.EqualFold(mockStreamingServer, "mock") {
 			preVoteStreamingService = mpvssi.NewMockLocalPreVoteStreamingService(chainId, 2*time.Minute)
+		} else if strings.EqualFold(mockStreamingServer, "local") {
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, constants.STREAMING_BASE_URL_LOCAL)
 		} else {
-			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId)
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, constants.STREAMING_BASE_URL)
 		}
 
 		if resumeStreaming {
@@ -136,6 +156,11 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 				}
 				return enginetypes.PreVoteStreamingSessionKey(input).ValidateBasic()
 			}, "bad session ID, please check")
+
+			if !strings.HasPrefix(sessionIdStr, chainId) {
+				utils.PrintlnStdErr("ERR: supplied session ID is not for chain", chainId)
+				os.Exit(1)
+			}
 
 			err = preVoteStreamingService.ResumeSession(enginetypes.PreVoteStreamingSessionId(sessionIdStr), enginetypes.PreVoteStreamingSessionKey(sessionKeyStr))
 			if err != nil {
@@ -164,7 +189,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 
 			fmt.Println("*** Share the following URL to others to join:")
 			fmt.Println(preVoteStreamingShareViewUrl)
-			if !mockStreamingServer {
+			if len(mockStreamingServer) < 1 {
 				const sleepTime = 20 * time.Second
 				fmt.Println("Start streaming next block pre-vote information in", sleepTime, "...")
 				time.Sleep(sleepTime)
@@ -453,11 +478,15 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 			}
 
 			if err != nil {
-				broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed with reason: %s", err)
+				if strings.Contains(err.Error(), "upstream status has not changed") {
+					broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress, no change"
+				} else {
+					broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed with reason: %s", err)
+				}
 				continue
 			}
 
-			broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress"
+			broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress, updated"
 
 			break
 		}

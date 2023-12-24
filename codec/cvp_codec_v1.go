@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/bcdevtools/consvp/constants"
 	"github.com/bcdevtools/consvp/types"
 	"github.com/bcdevtools/consvp/utils"
 	"github.com/pkg/errors"
@@ -33,6 +34,10 @@ func getCvpCodecV1() CvpCodec {
 }
 
 func (c cvpCodecV1) EncodeStreamingLightValidators(validators types.StreamingLightValidators) []byte {
+	if len(validators) > constants.MAX_VALIDATORS {
+		panic(fmt.Errorf("too many validators: %d/%d", len(validators), constants.MAX_VALIDATORS))
+	}
+
 	var b strings.Builder
 	b.WriteString(prefixDataEncodedByCvpCodecV1)
 
@@ -144,6 +149,10 @@ func (c cvpCodecV1) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 }
 
 func (c cvpCodecV1) EncodeStreamingNextBlockVotingInformation(inf *types.StreamingNextBlockVotingInformation) []byte {
+	if len(inf.ValidatorVoteStates) > constants.MAX_VALIDATORS {
+		panic(fmt.Errorf("too many validators: %d/%d", len(inf.ValidatorVoteStates), constants.MAX_VALIDATORS))
+	}
+
 	var b strings.Builder
 	b.WriteString(prefixDataEncodedByCvpCodecV1)
 
