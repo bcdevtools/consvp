@@ -70,12 +70,21 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		streamingMode = true
 	}
 	mockStreamingServer, _ := cmd.Flags().GetString(flagMockStreamingServer)
+	if strings.EqualFold(mockStreamingServer, "none") {
+		mockStreamingServer = ""
+	} else if strings.EqualFold(mockStreamingServer, "mock") {
+		// valid
+	} else if strings.EqualFold(mockStreamingServer, "local") {
+		// valid
+	} else {
+		utils.PrintlnStdErr("ERR: bad mock streaming server value:", mockStreamingServer)
+		os.Exit(1)
+	}
+
 	if len(mockStreamingServer) > 0 {
 		if !streamingMode {
 			panic(fmt.Errorf("cannot mock streaming server if not in streaming mode, requires --%s or --%s", flagStreaming, flagResumeStreaming))
 		}
-
-		mockStreamingServer = strings.ToLower(mockStreamingServer)
 	}
 
 	var rpcClient rpc_client.RpcClient
@@ -124,12 +133,10 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 
 		fmt.Println("Initializing pre-vote streaming service...")
-		if mockStreamingServer == "mock" {
+		if strings.EqualFold(mockStreamingServer, "mock") {
 			preVoteStreamingService = mpvssi.NewMockLocalPreVoteStreamingService(chainId, 2*time.Minute)
-		} else if mockStreamingServer == "local" {
+		} else if strings.EqualFold(mockStreamingServer, "local") {
 			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, constants.STREAMING_BASE_URL_LOCAL)
-		} else if len(mockStreamingServer) > 0 {
-			panic(fmt.Errorf("bad mock streaming server value: %s", mockStreamingServer))
 		} else {
 			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, constants.STREAMING_BASE_URL)
 		}
@@ -479,7 +486,7 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 				continue
 			}
 
-			broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress"
+			broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress, updated"
 
 			break
 		}
