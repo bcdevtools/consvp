@@ -29,7 +29,7 @@ func (suite *PreVoteStreamingServiceTestSuite) SetupSuite() {
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Refresh() {
-	suite.ss = NewPreVoteStreamingService("cosmoshub-4").(*preVoteStreamingServiceImpl)
+	suite.ss = NewPreVoteStreamingService("cosmoshub-4", constants.STREAMING_BASE_URL_LOCAL).(*preVoteStreamingServiceImpl)
 
 	// use mock HTTP client for mocking response
 	suite.httpClient = &mockPreVotedStreamingHttpClientImpl{
@@ -860,7 +860,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 						Index:   0,
 						Moniker: "moniker",
 					},
-					VotingBlockHash: "ABCD",
+					VotingBlockHash: "C0FF",
 					PreVoted:        true,
 					PreCommitVoted:  true,
 				},
@@ -1053,7 +1053,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_Stop() {
 					Index:   0,
 					Moniker: "moniker",
 				},
-				VotingBlockHash: "ABCD",
+				VotingBlockHash: "C0FF",
 				PreVoted:        true,
 				PreCommitVoted:  true,
 			},
