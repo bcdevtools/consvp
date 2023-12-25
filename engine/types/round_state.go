@@ -40,6 +40,8 @@ func (rs RoundState) GetPreVotePercent(round int) (percent float64, err error) {
 		if err != nil {
 			percent = 0.0
 			err = errors.Wrap(err, fmt.Sprintf("failed to parse pre-vote percent %s", finalBitArray))
+		} else {
+			percent = percent * 100
 		}
 	} else {
 		err = fmt.Errorf("invalid pre-vote bit array [%s] for round %d", bitArray, round)
@@ -55,6 +57,8 @@ func (rs RoundState) GetPreCommitPercent(round int) (percent float64, err error)
 		if err != nil {
 			percent = 0.0
 			err = errors.Wrap(err, fmt.Sprintf("failed to parse pre-commit percent %s", finalBitArray))
+		} else {
+			percent = percent * 100
 		}
 	} else {
 		err = fmt.Errorf("invalid pre-commit bit array [%s] for round %d", bitArray, round)
