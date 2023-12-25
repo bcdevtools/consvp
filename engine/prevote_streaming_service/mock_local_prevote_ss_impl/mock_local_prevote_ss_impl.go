@@ -1,5 +1,6 @@
 package mock_local_prevote_ss_impl
 
+//goland:noinspection SpellCheckingInspection
 import (
 	"fmt"
 	ss "github.com/bcdevtools/consvp/engine/prevote_streaming_service"

@@ -44,10 +44,10 @@ cvp https://rpc.example-consumer.network https://rpc.cosmos.network
 ### Pre-voting information format
 | Pre-Vote | Pre-Commit | Block Hash | Order | Voting Power | Moniker |
 |----------|----------------|------------|-------|--------------|---------|
-| ✅        | ❌              | COFF       | 1     | 11.03%       | Val1    |
+| ✅        | ❌              | C0FF       | 1     | 11.03%       | Val1    |
 | 🤷       | ❌              | ----       | 2     | 10.23%       | Val2    |
 | ❌        | ❌              | ----       | 3     | 08.07%       | Val3    |
-| ✅        | ✅              | COFF       | 4     | 01.15%       | Val4    |
+| ✅        | ✅              | C0FF       | 4     | 01.15%       | Val4    |
 
 ### Check binary version
 ```bash

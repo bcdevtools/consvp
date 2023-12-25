@@ -303,6 +303,7 @@ func Test_takeUntilSeparatorOrEnd(t *testing.T) {
 }
 
 func Test_sanitizeMoniker(t *testing.T) {
+	//goland:noinspection SpellCheckingInspection
 	tests := []struct {
 		name    string
 		moniker string
