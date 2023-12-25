@@ -382,8 +382,8 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 				"%v\nheight/round/step: %s\nv: %.0f%% c: %.0f%%",
 				duration,
 				votingInfo.HeightRoundStep,
-				votingInfo.PreVotePercent*100,
-				votingInfo.PreCommitPercent*100,
+				votingInfo.PreVotePercent,
+				votingInfo.PreCommitPercent,
 			)
 
 			batches, rowsCount := splitVotesIntoColumnsForRendering(votingInfo.SortedValidatorVoteStates)
@@ -443,9 +443,9 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 			}
 
 			preVotePctGauge.Title = fmt.Sprintf(" Pre-vote: %d/%d ", preVotedCount, totalVoteCount)
-			preVotePctGauge.Percent = int(votingInfo.PreVotePercent * 100)
+			preVotePctGauge.Percent = int(votingInfo.PreVotePercent)
 			preCommitVotePctGauge.Title = fmt.Sprintf(" Pre-commit: %d/%d ", preCommitVotedCount, totalVoteCount)
-			preCommitVotePctGauge.Percent = int(votingInfo.PreCommitPercent * 100)
+			preCommitVotePctGauge.Percent = int(votingInfo.PreCommitPercent)
 
 			break
 		case broadcastStatus := <-broadcastingStatusChan:
