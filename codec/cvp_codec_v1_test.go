@@ -206,6 +206,22 @@ func Test_cvpCodecV1_EncodeDecodeStreamingLightValidators(t *testing.T) {
 			},
 			wantErrDecode: false,
 		},
+		{
+			name: "collision of separator byte and bytes index",
+			validators: func() types.StreamingLightValidators {
+				var result types.StreamingLightValidators
+				for i := 0; i < constants.MAX_VALIDATORS; i++ {
+					result = append(result, types.StreamingLightValidator{
+						Index:                     i,
+						VotingPowerDisplayPercent: 99,
+						Moniker:                   fmt.Sprintf("Val%d", i+1),
+					})
+				}
+				return result
+			}(),
+			wantPanicEncode: false,
+			wantErrDecode:   false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -739,6 +755,27 @@ func Test_cvpCodecV1_EncodeAndDecodeStreamingNextBlockVotingInformation(t *testi
 					},
 				},
 			},
+		},
+		{
+			name: "collision of separator byte with bytes index",
+			inf: func() types.StreamingNextBlockVotingInformation {
+				nextBlockVotingInfo := types.StreamingNextBlockVotingInformation{
+					HeightRoundStep:       "1/2/3",
+					Duration:              time.Second,
+					PreVotedPercent:       1,
+					PreCommitVotedPercent: 2,
+				}
+
+				for i := 0; i < constants.MAX_VALIDATORS; i++ {
+					nextBlockVotingInfo.ValidatorVoteStates = append(nextBlockVotingInfo.ValidatorVoteStates, types.StreamingValidatorVoteState{
+						ValidatorIndex:    i,
+						PreVotedBlockHash: "C0FF",
+						PreVoted:          true,
+					})
+				}
+
+				return nextBlockVotingInfo
+			}(),
 		},
 	}
 	for _, tt := range tests {
