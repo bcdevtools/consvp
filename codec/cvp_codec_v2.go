@@ -25,6 +25,9 @@ var prefixDataEncodedByCvpCodecV2 = []byte{0x2, cvpCodecV2Separator}
 const cvpCodecV2MonikerBufferSize = 20
 const cvpCodecV2Base64EncodedMonikerBufferSize = 28
 
+var collisionSeparator2Bytes = []byte{0x0, cvpCodecV2Separator}
+var collisionSeparator2BytesReplacement = []byte{0xFF, 0xFF}
+
 type cvpCodecV2 struct {
 }
 
@@ -51,7 +54,11 @@ func (c cvpCodecV2) EncodeStreamingLightValidators(validators types.StreamingLig
 		if v.Index > 998 {
 			panic(fmt.Errorf("invalid validator index: %d, must be less than 999", v.Index))
 		}
-		b.Write(toUint16Buffer(v.Index))
+		bzIndex := toUint16Buffer(v.Index)
+		if bytes.Equal(bzIndex, collisionSeparator2Bytes) {
+			bzIndex = collisionSeparator2BytesReplacement
+		}
+		b.Write(bzIndex)
 
 		if v.VotingPowerDisplayPercent < 0 {
 			panic(fmt.Errorf("invalid voting power display percent: %f, must not be negative", v.VotingPowerDisplayPercent))
@@ -100,6 +107,9 @@ func (c cvpCodecV2) DecodeStreamingLightValidators(bz []byte) (types.StreamingLi
 		var validator types.StreamingLightValidator
 
 		bzIndex := mustTakeNBytesFrom(bz, cursor, 2)
+		if bytes.Equal(bzIndex, collisionSeparator2BytesReplacement) {
+			bzIndex = collisionSeparator2Bytes
+		}
 		validatorIndex := fromUint16Buffer(bzIndex)
 		if validatorIndex < 0 || validatorIndex > 998 {
 			return nil, fmt.Errorf("invalid validator index: %d", validatorIndex)
@@ -171,7 +181,11 @@ func (c cvpCodecV2) EncodeStreamingNextBlockVotingInformation(inf *types.Streami
 		if v.ValidatorIndex > 998 {
 			panic(fmt.Errorf("invalid validator index: %d, must be less than 999", v.ValidatorIndex))
 		}
-		b.Write(toUint16Buffer(v.ValidatorIndex))
+		bzIndex := toUint16Buffer(v.ValidatorIndex)
+		if bytes.Equal(bzIndex, collisionSeparator2Bytes) {
+			bzIndex = collisionSeparator2BytesReplacement
+		}
+		b.Write(bzIndex)
 
 		if len(v.PreVotedBlockHash) == 0 {
 			b.Write([]byte("----"))
@@ -270,8 +284,11 @@ func (c cvpCodecV2) DecodeStreamingNextBlockVotingInformation(bz []byte) (*types
 	for cursor < len(bzValidatorVoteStates) {
 		bzValidatorVoteState := bzValidatorVoteStates[cursor : cursor+7]
 
-		bzValidatorIndex := bzValidatorVoteState[:2]
-		validatorIndex := fromUint16Buffer(bzValidatorIndex)
+		bzIndex := bzValidatorVoteState[:2]
+		if bytes.Equal(bzIndex, collisionSeparator2BytesReplacement) {
+			bzIndex = collisionSeparator2Bytes
+		}
+		validatorIndex := fromUint16Buffer(bzIndex)
 		if validatorIndex < 0 || validatorIndex > 998 {
 			return nil, fmt.Errorf("invalid validator index: %d", validatorIndex)
 		}
