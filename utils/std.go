@@ -6,9 +6,9 @@ import (
 )
 
 func PrintlnStdErr(a ...any) {
-	fmt.Fprintln(os.Stderr, a...)
+	_, _ = fmt.Fprintln(os.Stderr, a...)
 }
 
 func PrintfStdErr(format string, a ...any) {
-	fmt.Fprintf(os.Stderr, format, a...)
+	_, _ = fmt.Fprintf(os.Stderr, format, a...)
 }

@@ -718,7 +718,7 @@ func Test_cvpCodecAllVersions_LargestEncodedPreVoteInfo(t *testing.T) {
 	for v := 1; v <= constants.MAX_VALIDATORS; v++ {
 		inf.ValidatorVoteStates = append(inf.ValidatorVoteStates, types.StreamingValidatorVoteState{
 			ValidatorIndex:    v - 1,
-			PreVotedBlockHash: "COFF",
+			PreVotedBlockHash: "C0FF",
 			PreVoted:          true,
 			VotedZeroes:       false,
 			PreCommitVoted:    true,
