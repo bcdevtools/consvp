@@ -201,10 +201,10 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	}
 
 	renderVotingInfoChan := make(chan interface{}) // accept both voting info and error
-	var broadcastingPreVoteInfoChan chan *enginetypes.NextBlockVotingInformation
+	var broadcastingPreVoteInfoChan chan interface{}
 	var broadcastingStatusChan chan string
 	if streamingMode {
-		broadcastingPreVoteInfoChan = make(chan *enginetypes.NextBlockVotingInformation)
+		broadcastingPreVoteInfoChan = make(chan interface{})
 		broadcastingStatusChan = make(chan string)
 	}
 
@@ -243,18 +243,20 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 
 		var nextBlockVotingInfo *enginetypes.NextBlockVotingInformation
+		var newUpdateContent interface{}
 
 		nextBlockVotingInfo, err = consensusService.GetNextBlockVotingInformation(lightValidators)
 		if err != nil {
-			renderVotingInfoChan <- errors.Wrap(err, "failed to get next block voting information")
-			continue
+			newUpdateContent = errors.Wrap(err, "failed to get next block voting information")
+		} else {
+			newUpdateContent = nextBlockVotingInfo
 		}
 
-		if nextBlockVotingInfo != nil {
-			renderVotingInfoChan <- nextBlockVotingInfo
+		if newUpdateContent != nil {
+			renderVotingInfoChan <- newUpdateContent
 			if streamingMode {
 				if !preVoteStreamingService.IsStopped() { // prevent memory stacking due to no consumer
-					broadcastingPreVoteInfoChan <- nextBlockVotingInfo
+					broadcastingPreVoteInfoChan <- newUpdateContent
 				}
 			}
 		}
@@ -467,7 +469,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 	}
 }
 
-func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-chan *enginetypes.NextBlockVotingInformation, broadcastingStatusChan chan<- string) {
+func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-chan interface{}, broadcastingStatusChan chan<- string) {
 	for {
 		select {
 		case vi := <-votingInfoChan:
@@ -477,7 +479,14 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 				continue
 			}
 
-			err, shouldStop := pvs.BroadcastPreVote(vi)
+			if _, ok := vi.(error); ok {
+				broadcastingStatusChan <- "💢 broadcast has been paused temporary due to fetching issue"
+				continue
+			}
+
+			votingInfo := vi.(*enginetypes.NextBlockVotingInformation)
+
+			err, shouldStop := pvs.BroadcastPreVote(votingInfo)
 			if shouldStop {
 				if err == nil {
 					broadcastingStatusChan <- "🔴 Broadcasting stopped"
