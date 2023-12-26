@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/bcdevtools/consvp/aos"
 	"github.com/bcdevtools/consvp/constants"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -17,7 +17,7 @@ If only a port is provided, the default host is localhost.
 	PreRun: func(cmd *cobra.Command, args []string) {
 		if cmd.Flags().Changed(flagVersion) {
 			versionHandler(cmd, args)
-			os.Exit(0)
+			aos.Exit(0)
 		}
 	},
 	Run: pvtopHandler,
@@ -38,6 +38,6 @@ func Execute() {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		aos.Exit(1)
 	}
 }
