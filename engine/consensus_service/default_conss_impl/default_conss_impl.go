@@ -82,7 +82,7 @@ func (s *defaultConsensusServiceClientImpl) GetNextBlockVotingInformation(lightV
 
 		// assert index is correct
 		if voted && !strings.Contains(preVote, lightValidator.GetFingerPrintAddress()) {
-			panic(fmt.Errorf("index mismatch for validator %s, finger print address %s could not be found in prevote %s", lightValidator.Moniker, lightValidator.GetFingerPrintAddress(), preVote))
+			panic(fmt.Errorf("index mismatch for validator %s, finger print address %s could not be found in prevote %s. Probably because validator set changed", lightValidator.Moniker, lightValidator.GetFingerPrintAddress(), preVote))
 		}
 	}
 
