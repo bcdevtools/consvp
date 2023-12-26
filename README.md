@@ -1,14 +1,14 @@
 Today is a wonderful day 🍀 for a breakfast at your favourite restaurant.
 
-But chain upgrade ✨? Upgrade panic 💢? Dev forgot to add upgrade handler that caused the panic 🤯?
+But chain upgrade ✨? Upgrade panic 💢? Devs forgot to add upgrade handler that caused the panic 🤯?
 
 You want your breakfast, But!!! you also want to know Pre-Vote status on-chain? You NEED this tool! Streaming Pre-Vote to your mobile and enjoying your wonderful morning ☀️ out of the house!
 
-Not done yet, core teams patched the issue but other validators went offline 😱? You NEED this tool! Once again ❤️‍🔥! Keep streaming Pre-Vote to your mobile and enjoying your wonderful afternoon ⛅️ in the forest with your partner 🌳
+Not done yet, core team patched the issue but other validators went offline 😱? You NEED this tool once again ❤️‍🔥! Keep streaming Pre-Vote to your mobile and enjoying your wonderful afternoon ⛅️ in the forest with your partner 🌳
 
-This tool magically turns boring day into a wonderful day for FREE 🤩
+This tool magically turns a boring day into a wonderful day for FREE 🤩
 
-Now read the following carefully 👇
+Now read me 👇
 
 # ConsVP
 A simple utility for watching pre-vote status on Tendermint/CometBFT chains. It will print out the current pre-vote status for each validator in the validator set. Useful for watching pre-votes during an upgrade or other network event causing a slowdown.
@@ -27,7 +27,7 @@ git clone https://github.com/bcdevtools/consvp ~/consvp
 cd ~/consvp && make install
 
 # Or update to the latest version
-cd ~/consvp ; git pull ; make install
+cd ~/consvp && git pull ; make install
 ```
 
 ## Basic usage
@@ -36,9 +36,9 @@ cvp
 # => use http://localhost:26657
 
 # For streaming mode
-cvp https://example.com:26657 --streaming
+cvp http://localhost:26657 --streaming
 # or resume streaming in case of mistakenly exit
-cvp https://example.com:26657 --resume-streaming
+cvp http://localhost:26657 --resume-streaming
 ```
 
 ```bash
@@ -55,6 +55,8 @@ cvp https://rpc.cosmos.network
 cvp https://rpc.example-consumer.network https://rpc.cosmos.network
 # => use https://rpc.example-consumer.network as consumer network RPC endpoint
 # and use https://rpc.cosmos.network as producer network RPC endpoint (typically Cosmos Hub)
+
+cvp http://consumer:26657 http://producer:26657 --streaming
 ```
 
 Notes:
