@@ -4,11 +4,12 @@ package prevote_ss_impl
 import (
 	"bytes"
 	"fmt"
-	"github.com/bcdevtools/consvp/codec"
 	"github.com/bcdevtools/consvp/constants"
 	ss "github.com/bcdevtools/consvp/engine/prevote_streaming_service"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
-	"github.com/bcdevtools/consvp/types"
+	corecodec "github.com/bcdevtools/cvp-streaming-core/codec"
+	coretypes "github.com/bcdevtools/cvp-streaming-core/types"
+	coreutils "github.com/bcdevtools/cvp-streaming-core/utils"
 	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/libs/json"
 	"io"
@@ -23,12 +24,12 @@ type preVoteStreamingServiceImpl struct {
 	chainId string
 
 	// sessionId is the unique identifier for this session. Can be used to generate URL for sharing or to broadcast.
-	sessionId enginetypes.PreVoteStreamingSessionId
+	sessionId coretypes.PreVoteStreamingSessionId
 
 	// sessionKey is used to authorize broadcasting pre-vote information.
-	sessionKey enginetypes.PreVoteStreamingSessionKey
+	sessionKey coretypes.PreVoteStreamingSessionKey
 
-	codec codec.CvpCodec
+	codec corecodec.CvpCodec
 
 	httpClient preVotedStreamingHttpClient
 
@@ -40,7 +41,7 @@ func NewPreVoteStreamingService(chainId string, upstreamServerUrl string) ss.Pre
 	return &preVoteStreamingServiceImpl{
 		chainId: chainId,
 
-		codec: codec.NewProxyCvpCodec(),
+		codec: corecodec.NewProxyCvpCodec(),
 
 		httpClient: &preVotedStreamingHttpClientImpl{
 			baseUrl: upstreamServerUrl,
@@ -54,7 +55,7 @@ func NewPreVoteStreamingService(chainId string, upstreamServerUrl string) ss.Pre
 // If a session had been started, it no-op and returns the URL for the existing session.
 func (s *preVoteStreamingServiceImpl) OpenSession(lightValidators enginetypes.LightValidators) (shareViewUrl string, err error) {
 	if len(s.sessionKey) < 1 {
-		var streamingLightValidators types.StreamingLightValidators
+		var streamingLightValidators coretypes.StreamingLightValidators
 		streamingLightValidators = transformLightValidatorsToStreamingLightValidators(lightValidators)
 
 		encoded := s.codec.EncodeStreamingLightValidators(streamingLightValidators)
@@ -79,7 +80,7 @@ func (s *preVoteStreamingServiceImpl) OpenSession(lightValidators enginetypes.Li
 			return "", errors.Wrap(errRead, "failed to read response body")
 		}
 
-		var registrationResponse enginetypes.RegisterPreVotedStreamingSessionResponse
+		var registrationResponse coretypes.PreVoteStreamingSessionRegistrationResponse
 		errUnmarshal := json.Unmarshal(bz, &registrationResponse)
 		if errUnmarshal != nil {
 			return "", errors.Wrap(errUnmarshal, "failed to unmarshal response body")
@@ -96,11 +97,11 @@ func (s *preVoteStreamingServiceImpl) OpenSession(lightValidators enginetypes.Li
 		s.sessionKey = registrationResponse.SessionKey
 	}
 
-	return fmt.Sprintf("%s/%s/%s", s.httpClient.BaseUrl(), constants.STREAMING_PATH_VIEW_PRE_VOTE_PREFIX, s.sessionId), nil
+	return coreutils.GetPublicUrlViewPreVoteStreamingSession(s.httpClient.BaseUrl(), string(s.sessionId)), nil
 }
 
 // ExposeSessionIdAndKey returns the session ID and session key. Can be used to ResumeSession.
-func (s *preVoteStreamingServiceImpl) ExposeSessionIdAndKey() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
+func (s *preVoteStreamingServiceImpl) ExposeSessionIdAndKey() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey) {
 	if len(s.sessionId) < 1 || len(s.sessionKey) < 1 {
 		panic("no active session found")
 	}
@@ -110,8 +111,8 @@ func (s *preVoteStreamingServiceImpl) ExposeSessionIdAndKey() (enginetypes.PreVo
 // ResumeSession resumes the session with the given session ID and session key.
 // Usefully when mistakenly closed process and want to resume, without having to create a new one.
 func (s *preVoteStreamingServiceImpl) ResumeSession(
-	sessionId enginetypes.PreVoteStreamingSessionId,
-	sessionKey enginetypes.PreVoteStreamingSessionKey,
+	sessionId coretypes.PreVoteStreamingSessionId,
+	sessionKey coretypes.PreVoteStreamingSessionKey,
 ) error {
 	if err := sessionId.ValidateBasic(); err != nil {
 		return errors.Wrap(err, "bad session ID")
@@ -155,7 +156,7 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 		return fmt.Errorf("service is already marked as stopped"), true
 	}
 
-	var si *types.StreamingNextBlockVotingInformation
+	var si *coretypes.StreamingNextBlockVotingInformation
 	si = transformNextBlockVotingInformationToStreamingNextBlockVotingInformation(information)
 
 	encoded := s.codec.EncodeStreamingNextBlockVotingInformation(si)
@@ -236,10 +237,10 @@ func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, action
 	}
 }
 
-func transformLightValidatorsToStreamingLightValidators(lightValidators enginetypes.LightValidators) types.StreamingLightValidators {
-	var streamingLightValidators types.StreamingLightValidators
+func transformLightValidatorsToStreamingLightValidators(lightValidators enginetypes.LightValidators) coretypes.StreamingLightValidators {
+	var streamingLightValidators coretypes.StreamingLightValidators
 	for _, lightValidator := range lightValidators {
-		streamingLightValidators = append(streamingLightValidators, types.StreamingLightValidator{
+		streamingLightValidators = append(streamingLightValidators, coretypes.StreamingLightValidator{
 			Index:                     lightValidator.Index,
 			VotingPowerDisplayPercent: lightValidator.VotingPowerDisplayPercent,
 			Moniker:                   lightValidator.Moniker,
@@ -248,8 +249,8 @@ func transformLightValidatorsToStreamingLightValidators(lightValidators enginety
 	return streamingLightValidators
 }
 
-func transformNextBlockVotingInformationToStreamingNextBlockVotingInformation(information *enginetypes.NextBlockVotingInformation) *types.StreamingNextBlockVotingInformation {
-	si := &types.StreamingNextBlockVotingInformation{
+func transformNextBlockVotingInformationToStreamingNextBlockVotingInformation(information *enginetypes.NextBlockVotingInformation) *coretypes.StreamingNextBlockVotingInformation {
+	si := &coretypes.StreamingNextBlockVotingInformation{
 		HeightRoundStep:       information.HeightRoundStep,
 		Duration:              time.Now().UTC().Sub(information.StartTimeUTC),
 		PreVotedPercent:       information.PreVotePercent,
@@ -262,7 +263,7 @@ func transformNextBlockVotingInformationToStreamingNextBlockVotingInformation(in
 		if len(voteState.VotingBlockHash) > 0 {
 			blockHash = voteState.VotingBlockHash[:4]
 		}
-		si.ValidatorVoteStates = append(si.ValidatorVoteStates, types.StreamingValidatorVoteState{
+		si.ValidatorVoteStates = append(si.ValidatorVoteStates, coretypes.StreamingValidatorVoteState{
 			ValidatorIndex:    voteState.Validator.Index,
 			PreVotedBlockHash: blockHash,
 			PreVoted:          voteState.PreVoted,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	ss "github.com/bcdevtools/consvp/engine/prevote_streaming_service"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
+	coretypes "github.com/bcdevtools/cvp-streaming-core/types"
 	"math/rand"
 	"time"
 )
@@ -13,8 +14,8 @@ var _ ss.PreVoteStreamingService = (*mockLocalPreVoteStreamingServiceImpl)(nil)
 
 type mockLocalPreVoteStreamingServiceImpl struct {
 	chainId       string
-	sessionId     enginetypes.PreVoteStreamingSessionId
-	sessionKey    enginetypes.PreVoteStreamingSessionKey
+	sessionId     coretypes.PreVoteStreamingSessionId
+	sessionKey    coretypes.PreVoteStreamingSessionKey
 	sessionExpiry time.Time
 	stopped       bool
 }
@@ -27,7 +28,7 @@ func NewMockLocalPreVoteStreamingService(chainId string, sessionDuration time.Du
 }
 
 func (m *mockLocalPreVoteStreamingServiceImpl) OpenSession(enginetypes.LightValidators) (shareViewUrl string, err error) {
-	id, key, err := enginetypes.NewPreVoteStreamingSession(m.chainId)
+	id, key, err := coretypes.NewPreVoteStreamingSession(m.chainId)
 	if err != nil {
 		panic("failed to generate pseudo pre-vote streaming session")
 	}
@@ -36,11 +37,11 @@ func (m *mockLocalPreVoteStreamingServiceImpl) OpenSession(enginetypes.LightVali
 	return "http://localhost", nil
 }
 
-func (m *mockLocalPreVoteStreamingServiceImpl) ExposeSessionIdAndKey() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
+func (m *mockLocalPreVoteStreamingServiceImpl) ExposeSessionIdAndKey() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey) {
 	return m.sessionId, m.sessionKey
 }
 
-func (m *mockLocalPreVoteStreamingServiceImpl) ResumeSession(id enginetypes.PreVoteStreamingSessionId, key enginetypes.PreVoteStreamingSessionKey) error {
+func (m *mockLocalPreVoteStreamingServiceImpl) ResumeSession(id coretypes.PreVoteStreamingSessionId, key coretypes.PreVoteStreamingSessionKey) error {
 	m.sessionId = id
 	m.sessionKey = key
 	return nil

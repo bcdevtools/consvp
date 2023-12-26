@@ -4,8 +4,10 @@ package prevote_ss_impl
 import (
 	"bytes"
 	"fmt"
-	"github.com/bcdevtools/consvp/constants"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
+	coreconstants "github.com/bcdevtools/cvp-streaming-core/constants"
+	coretypes "github.com/bcdevtools/cvp-streaming-core/types"
+	coreutils "github.com/bcdevtools/cvp-streaming-core/utils"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/libs/json"
 	"io"
@@ -29,7 +31,7 @@ func (suite *PreVoteStreamingServiceTestSuite) SetupSuite() {
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Refresh() {
-	suite.ss = NewPreVoteStreamingService("cosmoshub-4", constants.STREAMING_BASE_URL_LOCAL).(*preVoteStreamingServiceImpl)
+	suite.ss = NewPreVoteStreamingService("cosmoshub-4", coreconstants.STREAMING_BASE_URL_LOCAL).(*preVoteStreamingServiceImpl)
 
 	// use mock HTTP client for mocking response
 	suite.httpClient = &mockPreVotedStreamingHttpClientImpl{
@@ -40,14 +42,14 @@ func (suite *PreVoteStreamingServiceTestSuite) Refresh() {
 
 func (suite *PreVoteStreamingServiceTestSuite) RandomSession() {
 	var err error
-	suite.ss.sessionId, suite.ss.sessionKey, err = enginetypes.NewPreVoteStreamingSession(suite.ss.chainId)
+	suite.ss.sessionId, suite.ss.sessionKey, err = coretypes.NewPreVoteStreamingSession(suite.ss.chainId)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
-	pseudoSessionId, pseudoSessionKey, errGenPseudoSessionPair := enginetypes.NewPreVoteStreamingSession(suite.ss.chainId)
+	pseudoSessionId, pseudoSessionKey, errGenPseudoSessionPair := coretypes.NewPreVoteStreamingSession(suite.ss.chainId)
 	if errGenPseudoSessionPair != nil {
 		panic(errGenPseudoSessionPair)
 	}
@@ -73,7 +75,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 				},
 			},
 			streamingServerReturnResponse: func() *http.Response {
-				serverResponse := enginetypes.RegisterPreVotedStreamingSessionResponse{
+				serverResponse := coretypes.PreVoteStreamingSessionRegistrationResponse{
 					SessionId:  pseudoSessionId,
 					SessionKey: pseudoSessionKey,
 				}
@@ -106,8 +108,8 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 				},
 			},
 			streamingServerReturnResponse: func() *http.Response {
-				id, k, _ := enginetypes.NewPreVoteStreamingSession(suite.ss.chainId)
-				serverResponse := enginetypes.RegisterPreVotedStreamingSessionResponse{
+				id, k, _ := coretypes.NewPreVoteStreamingSession(suite.ss.chainId)
+				serverResponse := coretypes.PreVoteStreamingSessionRegistrationResponse{
 					SessionId:  id,
 					SessionKey: k,
 				}
@@ -195,7 +197,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 				},
 			},
 			streamingServerReturnResponse: func() *http.Response {
-				serverResponse := enginetypes.RegisterPreVotedStreamingSessionResponse{
+				serverResponse := coretypes.PreVoteStreamingSessionRegistrationResponse{
 					SessionId:  "malformed",
 					SessionKey: pseudoSessionKey,
 				}
@@ -225,7 +227,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 				},
 			},
 			streamingServerReturnResponse: func() *http.Response {
-				serverResponse := enginetypes.RegisterPreVotedStreamingSessionResponse{
+				serverResponse := coretypes.PreVoteStreamingSessionRegistrationResponse{
 					SessionId:  pseudoSessionId,
 					SessionKey: "malformed",
 				}
@@ -283,12 +285,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 
 			suite.Require().NoError(err)
 			suite.Equal(
-				fmt.Sprintf(
-					"%s/%s/%s",
-					suite.httpClient.baseUrl,
-					constants.STREAMING_PATH_VIEW_PRE_VOTE_PREFIX,
-					suite.ss.sessionId,
-				),
+				coreutils.GetPublicUrlViewPreVoteStreamingSession(suite.httpClient.baseUrl, string(suite.ss.sessionId)),
 				shareViewUrl,
 			)
 
@@ -468,19 +465,19 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ExposeSessionIdAndKey() {
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
-	pseudoSessionId, pseudoSessionKey, errGenPseudoSessionPair := enginetypes.NewPreVoteStreamingSession(suite.ss.chainId)
+	pseudoSessionId, pseudoSessionKey, errGenPseudoSessionPair := coretypes.NewPreVoteStreamingSession(suite.ss.chainId)
 	if errGenPseudoSessionPair != nil {
 		panic(errGenPseudoSessionPair)
 	}
 
-	newPseudoSessionIdAndKeyProvider := func() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
-		pseudoSessionId, pseudoSessionKey, _ := enginetypes.NewPreVoteStreamingSession(suite.ss.chainId)
+	newPseudoSessionIdAndKeyProvider := func() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey) {
+		pseudoSessionId, pseudoSessionKey, _ := coretypes.NewPreVoteStreamingSession(suite.ss.chainId)
 		return pseudoSessionId, pseudoSessionKey
 	}
 
 	tests := []struct {
 		name                              string
-		inputSessionProvider              func() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey)
+		inputSessionProvider              func() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey)
 		streamingServerReturnResponse     *http.Response
 		streamingServerReturnError        error
 		wantError                         bool
@@ -489,7 +486,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 	}{
 		{
 			name: "resume session success",
-			inputSessionProvider: func() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
+			inputSessionProvider: func() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey) {
 				return pseudoSessionId, pseudoSessionKey
 			},
 			streamingServerReturnResponse: func() *http.Response {
@@ -514,7 +511,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 		},
 		{
 			name: "ignore response body",
-			inputSessionProvider: func() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
+			inputSessionProvider: func() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey) {
 				return pseudoSessionId, pseudoSessionKey
 			},
 			streamingServerReturnResponse: func() *http.Response {
@@ -537,7 +534,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 		},
 		{
 			name: "when malformed session id",
-			inputSessionProvider: func() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
+			inputSessionProvider: func() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey) {
 				return "malformed", pseudoSessionKey
 			},
 			wantError:                         true,
@@ -546,7 +543,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 		},
 		{
 			name: "when malformed session key",
-			inputSessionProvider: func() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey) {
+			inputSessionProvider: func() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey) {
 				return pseudoSessionId, "malformed"
 			},
 			wantError:                         true,
