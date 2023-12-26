@@ -5,12 +5,17 @@ A full rework of [pvtop](https://github.com/blockpane/pvtop) by [@blockpane](htt
 - Live-streaming mode ([view sample](https://cvp.bcdev.tools/pvtop/sample-chain-1_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA)), sharing pre-voting information to everyone: `cvp --streaming`
 - Display Block Hash fingerprint which the validator voted on
 - Allow scrolling on terminal UI (thanks to [@freak12techno](https://github.com/freak12techno))
-- Update binary to the latest version: `cvp --update`
 
 ## Installation
 ```bash
-go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 # Require go 1.19+
+
+# New install
+git clone https://github.com/bcdevtools/consvp ~/consvp
+cd ~/consvp && make install
+
+# Or update to the latest version
+cd ~/consvp ; git pull ; make install
 ```
 
 ## Basic usage
@@ -56,12 +61,6 @@ Notes:
 ### Check binary version
 ```bash
 cvp --version
-```
-
-### Update binary
-```bash
-cvp --update
-# Actual command: go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ```
 
 #### 🌟 We are very pleased to accompany blockchain developers around the world 🌟

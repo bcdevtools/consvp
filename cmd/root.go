@@ -19,11 +19,6 @@ If only a port is provided, the default host is localhost.
 			versionHandler(cmd, args)
 			os.Exit(0)
 		}
-		if cmd.Flags().Changed(flagUpdate) {
-			fmt.Println("Updating binary version...")
-			updateHandler(cmd, args)
-			os.Exit(0)
-		}
 	},
 	Run: pvtopHandler,
 }
@@ -37,8 +32,6 @@ func Execute() {
 
 	rootCmd.Flags().BoolP(flagVersion, "v", false, "print the binary version. WARN: This action will bypass the main command handler.")
 	rootCmd.Flags().Bool(flagLongVersion, false, fmt.Sprintf("print extra version information, must be used with --%s", flagVersion))
-
-	rootCmd.Flags().Bool(flagUpdate, false, "update binary version. WARN: This action will bypass the main command handler.")
 
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true    // hide the 'completion' subcommand
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true}) // hide the 'help' subcommand
