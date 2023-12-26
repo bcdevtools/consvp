@@ -916,6 +916,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 			wantErrContains: "unauthorized, probably session timed out",
 		},
 		{
+			statusCode:      http.StatusNotFound,
+			wantErrContains: "session not found, probably due to upstream server restarted, please create a new streaming session",
+		},
+		{
 			statusCode:      http.StatusTooManyRequests,
 			wantErrContains: "slow down",
 		},
@@ -974,6 +978,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		{
 			statusCode: http.StatusUnauthorized,
 			shouldStop: true,
+		},
+		{
+			statusCode: http.StatusNotFound,
+			shouldStop: false,
 		},
 		{
 			statusCode: http.StatusForbidden,

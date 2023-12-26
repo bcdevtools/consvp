@@ -175,6 +175,8 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 
 	if resp.StatusCode == http.StatusNotModified {
 		err = fmt.Errorf("upstream status has not changed, probably due to duplicated or outdated content")
+	} else if resp.StatusCode == http.StatusNotFound {
+		err = fmt.Errorf("session not found, probably due to upstream server restarted, please create a new streaming session")
 	} else {
 		err = genericHandleStatusCode(resp, http.StatusOK, "broadcast pre-vote")
 	}
@@ -183,6 +185,9 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 		shouldStop = true
 		switch resp.StatusCode {
 		case http.StatusNotModified:
+			shouldStop = false
+			break
+		case http.StatusNotFound:
 			shouldStop = false
 			break
 		case http.StatusTooManyRequests: // rate limit
