@@ -473,7 +473,7 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 		case vi := <-votingInfoChan:
 			if vi == nil {
 				// TODO: investigate why this happens while channel is not closed
-				utils.PrintlnStdErr("ERR: un-expected nil voting info")
+				// utils.PrintlnStdErr("ERR: un-expected nil voting info")
 				continue
 			}
 
