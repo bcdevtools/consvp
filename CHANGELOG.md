@@ -17,12 +17,16 @@ Templates:
 #### Features
 
 #### Improvements
-- (broadcast) [#38](https://github.com/bcdevtools/consvp/pull/38) Improve message content when server returns 404 as result of broadcast
-- (exit) [#39](https://github.com/bcdevtools/consvp/pull/39) Execute cleanup methods gracefully when app exit
 
 #### Bug Fixes
 
 #### Breaking changes
+
+## Release v1.0.3
+
+#### Improvements
+- (broadcast) [#38](https://github.com/bcdevtools/consvp/pull/38) Improve message content when server returns 404 as result of broadcast
+- (exit) [#39](https://github.com/bcdevtools/consvp/pull/39) Execute cleanup methods gracefully when app exit
 
 ## Release v1.0.2
 
