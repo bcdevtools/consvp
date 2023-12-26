@@ -250,10 +250,12 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		renderVotingInfoChan <- nextBlockVotingInfo
-		if streamingMode {
-			if !preVoteStreamingService.IsStopped() { // prevent memory stacking due to no consumer
-				broadcastingPreVoteInfoChan <- nextBlockVotingInfo
+		if nextBlockVotingInfo != nil {
+			renderVotingInfoChan <- nextBlockVotingInfo
+			if streamingMode {
+				if !preVoteStreamingService.IsStopped() { // prevent memory stacking due to no consumer
+					broadcastingPreVoteInfoChan <- nextBlockVotingInfo
+				}
 			}
 		}
 	}
@@ -367,6 +369,10 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 
 			break
 		case votingInfoAny := <-votingInfoChan:
+			if votingInfoAny == nil {
+				continue
+			}
+
 			refresh = true
 
 			if err, ok := votingInfoAny.(error); ok {
@@ -382,11 +388,11 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 			}
 
 			pSummary.Text = fmt.Sprintf(
-				"%v\nheight/round/step: %s\nv: %.0f%% c: %.0f%%",
-				duration,
+				"height/round/step: %s\nv: %.0f%% c: %.0f%% (%v)",
 				votingInfo.HeightRoundStep,
 				votingInfo.PreVotePercent,
 				votingInfo.PreCommitPercent,
+				duration,
 			)
 
 			batches, rowsCount := splitVotesIntoColumnsForRendering(votingInfo.SortedValidatorVoteStates)
@@ -466,7 +472,9 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 		select {
 		case vi := <-votingInfoChan:
 			if vi == nil {
-				panic("voting info is nil")
+				// TODO: investigate why this happens while channel is not closed
+				utils.PrintlnStdErr("ERR: un-expected nil voting info")
+				continue
 			}
 
 			err, shouldStop := pvs.BroadcastPreVote(vi)
