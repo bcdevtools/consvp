@@ -14,7 +14,6 @@ go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ```
 
 ## Basic usage
-### PVTop-like command
 ```bash
 cvp
 # => use http://localhost:26657
@@ -41,11 +40,16 @@ cvp https://rpc.example-consumer.network https://rpc.cosmos.network
 # and use https://rpc.cosmos.network as producer network RPC endpoint (typically Cosmos Hub)
 ```
 
+Notes:
+- Default fetching consensus state is 3 seconds, can reduce to 1s by adding `-r` flag.
+- In case interrupted from streaming mode, should resume instead of start a new session. Resume by adding `--resume-streaming` flag and provide the latest session id and key printed in previous run.
+- Streaming session has default expiration time is 12 hours.
+
 ### Pre-voting information format
 | Pre-Vote | Pre-Commit | Block Hash | Order | Voting Power | Moniker |
 |----------|----------------|------------|-------|--------------|---------|
 | ✅        | ❌              | C0FF       | 1     | 11.03%       | Val1    |
-| 🤷       | ❌              | ----       | 2     | 10.23%       | Val2    |
+| 🤷       | ❌              | 0000       | 2     | 10.23%       | Val2    |
 | ❌        | ❌              | ----       | 3     | 08.07%       | Val3    |
 | ✅        | ✅              | C0FF       | 4     | 01.15%       | Val4    |
 
@@ -57,5 +61,7 @@ cvp --version
 ### Update binary
 ```bash
 cvp --update
-# Actually it does: go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
+# Actual command: go install -v github.com/bcdevtools/consvp/cmd/cvp@latest
 ```
+
+#### 🌟 We are very pleased to accompany blockchain developers around the world 🌟
