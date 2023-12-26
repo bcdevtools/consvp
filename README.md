@@ -1,3 +1,15 @@
+Today is a wonderful day 🍀 for a breakfast at your favourite restaurant.
+
+But chain upgrade ✨? Upgrade panic 💢? Dev forgot to add upgrade handler that caused the panic 🤯?
+
+You want your breakfast, But!!! you also want to know Pre-Vote status on-chain? You NEED this tool! Streaming Pre-Vote to your mobile and enjoying your wonderful morning ☀️ out of the house!
+
+Not done yet, core teams patched the issue but other validators went offline 😱? You NEED this tool! Once again ❤️‍🔥! Keep streaming Pre-Vote to your mobile and enjoying your wonderful afternoon ⛅️ in the forest with your partner 🌳
+
+This tool magically turns boring day into a wonderful day for FREE 🤩
+
+Now read the following carefully 👇
+
 # ConsVP
 A simple utility for watching pre-vote status on Tendermint/CometBFT chains. It will print out the current pre-vote status for each validator in the validator set. Useful for watching pre-votes during an upgrade or other network event causing a slowdown.
 ___
