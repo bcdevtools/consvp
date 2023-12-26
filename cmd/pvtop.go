@@ -267,6 +267,8 @@ const terminalColumnsCount = 3
 
 // drawScreen render pre-vote information into screen.
 func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan interface{}, broadcastingStatusChan <-chan string) {
+	defer utils.AppExitHelper.ExecuteFunctionsUponAppExit()
+	
 	if err := ui.Init(); err != nil {
 		//goland:noinspection SpellCheckingInspection
 		utils.PrintfStdErr("failed to initialize termui: %v\n", err)
@@ -471,6 +473,8 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 }
 
 func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-chan interface{}, broadcastingStatusChan chan<- string) {
+	defer utils.AppExitHelper.ExecuteFunctionsUponAppExit()
+
 	for {
 		select {
 		case vi := <-votingInfoChan:
