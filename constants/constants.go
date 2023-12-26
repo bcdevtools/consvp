@@ -8,5 +8,11 @@ const (
 	APP_INTRO      = "You are using " + APP_NAME + ", a product of bcdev.tools\nFollow us on GitHub for new tools and updates: " + GITHUB_ORG + " (don't forget to star our repo!)"
 
 	BINARY_NAME = "cvp"
-	VERSION     = "v1.0.0"
+)
+
+//goland:noinspection GoSnakeCaseUsage
+var (
+	VERSION         = ""
+	GIT_COMMIT_HASH = ""
+	BUILD_DATE      = ""
 )

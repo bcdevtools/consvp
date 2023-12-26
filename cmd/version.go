@@ -33,9 +33,11 @@ func versionHandler(cmd *cobra.Command, _ []string) {
 		}
 	}
 
-	fmt.Printf("%-9s %s\n", "Version:", constants.VERSION)
+	fmt.Printf("%-12s %s\n", "Version:", constants.VERSION)
+	fmt.Printf("%-12s %s\n", "Git commit:", constants.GIT_COMMIT_HASH)
+	fmt.Printf("%-12s %s\n", "Build date:", constants.BUILD_DATE)
 
 	if printLongVersion {
-		fmt.Printf("%-9s %s %s/%s\n", "Go:", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+		fmt.Printf("%-12s %s %s/%s\n", "Go:", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 	}
 }
