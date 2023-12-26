@@ -28,3 +28,11 @@ Templates:
 
 #### Bug Fixes
 - (fix) [#31](https://github.com/bcdevtools/consvp/pull/31) fix(update): remove command flag `--update` and update docs
+
+## Release v1.0.0
+
+#### Features
+- Full rework of [pvtop](https://github.com/blockpane/pvtop)
+- Live-streaming mode ([view sample](https://cvp.bcdev.tools/pvtop/sample-chain-1_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA))
+- Display Block Hash fingerprint which the validator voted on
+- Allow scrolling on terminal UI
