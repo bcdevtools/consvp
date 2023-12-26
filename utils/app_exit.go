@@ -2,12 +2,21 @@ package utils
 
 import "sync"
 
+// FuncUponAppExit is a function that will be executed upon app exit.
+// Panics will be ignored.
 type FuncUponAppExit func()
+
+// IAppExitHelper is a helper to register and execute functions upon app exit.
 type IAppExitHelper interface {
+	// RegisterFuncUponAppExit registers a function to be executed upon app exit.
 	RegisterFuncUponAppExit(funcUponAppExit FuncUponAppExit)
+
+	// ExecuteFunctionsUponAppExit executes all registered functions upon app exit.
+	// Panics will be ignored and methods will be executed only once.
 	ExecuteFunctionsUponAppExit()
 }
 
+// AppExitHelper is a helper to register and execute functions upon app exit.
 var AppExitHelper IAppExitHelper = &appExitHelper{
 	mutex:                        &sync.Mutex{},
 	executedFunctionsUponAppExit: false,
@@ -20,6 +29,7 @@ type appExitHelper struct {
 	funcUponAppExit              []FuncUponAppExit
 }
 
+// RegisterFuncUponAppExit registers a function to be executed upon app exit.
 func (a *appExitHelper) RegisterFuncUponAppExit(funcUponAppExit FuncUponAppExit) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
@@ -27,6 +37,8 @@ func (a *appExitHelper) RegisterFuncUponAppExit(funcUponAppExit FuncUponAppExit)
 	a.funcUponAppExit = append(a.funcUponAppExit, funcUponAppExit)
 }
 
+// ExecuteFunctionsUponAppExit executes all registered functions upon app exit.
+// Panics will be ignored and methods will be executed only once.
 func (a *appExitHelper) ExecuteFunctionsUponAppExit() {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
