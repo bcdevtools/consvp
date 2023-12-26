@@ -17,17 +17,18 @@ Templates:
 #### Features
 
 #### Improvements
-- (docs) [#35](https://github.com/bcdevtools/consvp/pull/35) docs: add CHANGELOG.md
+- (docs) [#35](https://github.com/bcdevtools/consvp/pull/35) Add CHANGELOG.md
+- (make) [#36](https://github.com/bcdevtools/consvp/pull/36) Use git tag to mark binary version during `make install` or `make build`
 
 #### Bug Fixes
-- (imp) [#34](https://github.com/bcdevtools/consvp/pull/34) fix(broadcast): reflect fetch issue in broadcast paragraph T-UI
+- (broadcast) [#34](https://github.com/bcdevtools/consvp/pull/34) Reflect fetch issue in broadcast paragraph T-UI
 
 #### Schema Breaking
 
 ## Release v1.0.1
 
 #### Bug Fixes
-- (fix) [#31](https://github.com/bcdevtools/consvp/pull/31) fix(update): remove command flag `--update` and update docs
+- (update) [#31](https://github.com/bcdevtools/consvp/pull/31) Remove command flag `--update` and update docs
 
 ## Release v1.0.0
 
