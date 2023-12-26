@@ -11,7 +11,7 @@ type IAppExitHelper interface {
 	// RegisterFuncUponAppExit registers a function to be executed upon app exit.
 	RegisterFuncUponAppExit(funcUponAppExit FuncUponAppExit)
 
-	// ExecuteFunctionsUponAppExit executes all registered functions upon app exit.
+	// ExecuteFunctionsUponAppExit executes all registered functions (LIFO) upon app exit.
 	// Panics will be ignored and methods will be executed only once.
 	ExecuteFunctionsUponAppExit()
 }
@@ -37,7 +37,7 @@ func (a *appExitHelper) RegisterFuncUponAppExit(funcUponAppExit FuncUponAppExit)
 	a.funcUponAppExit = append(a.funcUponAppExit, funcUponAppExit)
 }
 
-// ExecuteFunctionsUponAppExit executes all registered functions upon app exit.
+// ExecuteFunctionsUponAppExit executes all registered functions (LIFO) upon app exit.
 // Panics will be ignored and methods will be executed only once.
 func (a *appExitHelper) ExecuteFunctionsUponAppExit() {
 	a.mutex.Lock()
@@ -52,13 +52,13 @@ func (a *appExitHelper) ExecuteFunctionsUponAppExit() {
 		}
 	}()
 
-	if a.executedFunctionsUponAppExit {
+	if a.executedFunctionsUponAppExit || len(a.funcUponAppExit) < 1 {
 		return
 	}
 
 	a.executedFunctionsUponAppExit = true
 
-	for _, f := range a.funcUponAppExit {
+	for i := len(a.funcUponAppExit) - 1; i >= 0; i-- {
 		func(f FuncUponAppExit) {
 			defer func() {
 				err := recover()
@@ -68,6 +68,6 @@ func (a *appExitHelper) ExecuteFunctionsUponAppExit() {
 			}()
 
 			f()
-		}(f)
+		}(a.funcUponAppExit[i])
 	}
 }
