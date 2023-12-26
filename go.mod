@@ -3,12 +3,13 @@ module github.com/bcdevtools/consvp
 go 1.19
 
 require (
+	github.com/bcdevtools/cvp-streaming-core v1.0.0
 	github.com/cosmos/cosmos-sdk v0.45.16
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/golang/protobuf v1.5.3
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/tendermint/tendermint v0.34.29
 )
 

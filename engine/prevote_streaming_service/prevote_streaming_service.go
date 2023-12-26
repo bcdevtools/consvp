@@ -3,6 +3,7 @@ package prevote_streaming_service
 //goland:noinspection SpellCheckingInspection
 import (
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
+	coretypes "github.com/bcdevtools/cvp-streaming-core/types"
 )
 
 // PreVoteStreamingService is the interface for Pre-Vote & PreCommit-Vote streaming.
@@ -14,12 +15,12 @@ type PreVoteStreamingService interface {
 	OpenSession(lightValidators enginetypes.LightValidators) (shareViewUrl string, err error)
 
 	// ExposeSessionIdAndKey returns the session ID and session key. Can be used to ResumeSession.
-	ExposeSessionIdAndKey() (enginetypes.PreVoteStreamingSessionId, enginetypes.PreVoteStreamingSessionKey)
+	ExposeSessionIdAndKey() (coretypes.PreVoteStreamingSessionId, coretypes.PreVoteStreamingSessionKey)
 
 	// ResumeSession resumes the session with the given session ID and session key.
 	// Usefully when mistakenly closed process and want to resume, without having to create a new one.
 	ResumeSession(
-		sessionId enginetypes.PreVoteStreamingSessionId, sessionKey enginetypes.PreVoteStreamingSessionKey,
+		sessionId coretypes.PreVoteStreamingSessionId, sessionKey coretypes.PreVoteStreamingSessionKey,
 	) error
 
 	// BroadcastPreVote broadcasts the given pre-vote information to all viewers.

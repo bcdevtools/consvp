@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/hex"
 	"fmt"
+	coreutils "github.com/bcdevtools/cvp-streaming-core/utils"
 	"testing"
 )
 
@@ -40,7 +41,7 @@ func TestTruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(t *testing
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(tt.input, tt.maxBytes); string(got) != tt.want {
+			if got := coreutils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(tt.input, tt.maxBytes); string(got) != tt.want {
 				fmt.Println("got buffer", hex.EncodeToString(got))
 				t.Errorf("TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix() = %s, want %s", string(got), tt.want)
 			}

@@ -14,6 +14,9 @@ import (
 	drpci "github.com/bcdevtools/consvp/engine/rpc_client/default_rpc_impl"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	"github.com/bcdevtools/consvp/utils"
+	coreconstants "github.com/bcdevtools/cvp-streaming-core/constants"
+	coretypes "github.com/bcdevtools/cvp-streaming-core/types"
+	coreutils "github.com/bcdevtools/cvp-streaming-core/utils"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"github.com/pkg/errors"
@@ -127,8 +130,8 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		if len(lightValidators) > constants.MAX_VALIDATORS {
-			utils.PrintfStdErr("ERR: too many validators %d/%d, cannot start streaming session\n", len(lightValidators), constants.MAX_VALIDATORS)
+		if len(lightValidators) > coreconstants.MAX_VALIDATORS {
+			utils.PrintfStdErr("ERR: too many validators %d/%d, cannot start streaming session\n", len(lightValidators), coreconstants.MAX_VALIDATORS)
 			os.Exit(1)
 		}
 
@@ -136,9 +139,9 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		if strings.EqualFold(mockStreamingServer, "mock") {
 			preVoteStreamingService = mpvssi.NewMockLocalPreVoteStreamingService(chainId, 2*time.Minute)
 		} else if strings.EqualFold(mockStreamingServer, "local") {
-			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, constants.STREAMING_BASE_URL_LOCAL)
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL_LOCAL)
 		} else {
-			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, constants.STREAMING_BASE_URL)
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL)
 		}
 
 		if resumeStreaming {
@@ -148,13 +151,13 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 				if len(input) < 1 {
 					return fmt.Errorf("must not be empty")
 				}
-				return enginetypes.PreVoteStreamingSessionId(input).ValidateBasic()
+				return coretypes.PreVoteStreamingSessionId(input).ValidateBasic()
 			}, "bad session ID, please check")
 			sessionKeyStr := readUntilValid(reader, "Enter session key:", func(input string) error {
 				if len(input) < 1 {
 					return fmt.Errorf("must not be empty")
 				}
-				return enginetypes.PreVoteStreamingSessionKey(input).ValidateBasic()
+				return coretypes.PreVoteStreamingSessionKey(input).ValidateBasic()
 			}, "bad session ID, please check")
 
 			if !strings.HasPrefix(sessionIdStr, chainId) {
@@ -162,7 +165,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 				os.Exit(1)
 			}
 
-			err = preVoteStreamingService.ResumeSession(enginetypes.PreVoteStreamingSessionId(sessionIdStr), enginetypes.PreVoteStreamingSessionKey(sessionKeyStr))
+			err = preVoteStreamingService.ResumeSession(coretypes.PreVoteStreamingSessionId(sessionIdStr), coretypes.PreVoteStreamingSessionKey(sessionKeyStr))
 			if err != nil {
 				utils.PrintlnStdErr("ERR: failed to resume streaming session id", sessionIdStr)
 				utils.PrintlnStdErr(err)
@@ -415,7 +418,7 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 						preCommitVotedCount--
 					}
 
-					valMoniker := string(utils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(voter.Validator.Moniker, 15))
+					valMoniker := string(coreutils.TruncateStringUntilBufferLessThanXBytesOrFillWithSpaceSuffix(voter.Validator.Moniker, 15))
 					valMoniker = strings.TrimSpace(valMoniker)
 
 					lists[i].Rows[rowIndex] = fmt.Sprintf(
