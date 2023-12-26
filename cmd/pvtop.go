@@ -4,6 +4,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"github.com/bcdevtools/consvp/aos"
 	"github.com/bcdevtools/consvp/constants"
 	conss "github.com/bcdevtools/consvp/engine/consensus_service"
 	dconsi "github.com/bcdevtools/consvp/engine/consensus_service/default_conss_impl"
@@ -41,9 +42,11 @@ const defaultRefreshInterval = 3 * time.Second
 const rapidRefreshInterval = 1 * time.Second
 
 func pvtopHandler(cmd *cobra.Command, args []string) {
+	defer utils.AppExitHelper.ExecuteFunctionsUponAppExit()
+
 	if len(args) > 2 {
 		utils.PrintlnStdErr("ERR: Invalid number of arguments")
-		os.Exit(1)
+		aos.Exit(1)
 	}
 
 	fmt.Println(constants.APP_INTRO)
@@ -52,7 +55,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	consumerUrl, err := readPvTopArg(args, 0, true)
 	if err != nil {
 		utils.PrintlnStdErr(err)
-		os.Exit(1)
+		aos.Exit(1)
 	}
 
 	if consumerUrl == "" {
@@ -63,7 +66,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	providerUrl, err := readPvTopArg(args, 1, true)
 	if err != nil {
 		utils.PrintlnStdErr(err)
-		os.Exit(1)
+		aos.Exit(1)
 	}
 
 	useHttp := cmd.Flags().Changed(flagHttp)
@@ -81,7 +84,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		// valid
 	} else {
 		utils.PrintlnStdErr("ERR: bad mock streaming server value:", mockStreamingServer)
-		os.Exit(1)
+		aos.Exit(1)
 	}
 
 	if len(mockStreamingServer) > 0 {
@@ -93,16 +96,15 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	var rpcClient rpc_client.RpcClient
 	var consensusService conss.ConsensusService
 	var preVoteStreamingService pvss.PreVoteStreamingService
-	exitCallback1 := func() {
+
+	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
 		if rpcClient != nil {
 			_ = rpcClient.Shutdown()
 		}
 		if consensusService != nil {
 			_ = consensusService.Shutdown()
 		}
-	}
-
-	defer exitCallback1()
+	})
 
 	rpcClient = drpci.NewDefaultRpcClient(consumerUrl, providerUrl, !useHttp)
 	consensusService = dconsi.NewDefaultConsensusServiceClientImpl(rpcClient)
@@ -132,7 +134,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 
 		if len(lightValidators) > coreconstants.MAX_VALIDATORS {
 			utils.PrintfStdErr("ERR: too many validators %d/%d, cannot start streaming session\n", len(lightValidators), coreconstants.MAX_VALIDATORS)
-			os.Exit(1)
+			aos.Exit(1)
 		}
 
 		fmt.Println("Initializing pre-vote streaming service...")
@@ -162,14 +164,14 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 
 			if !strings.HasPrefix(sessionIdStr, chainId) {
 				utils.PrintlnStdErr("ERR: supplied session ID is not for chain", chainId)
-				os.Exit(1)
+				aos.Exit(1)
 			}
 
 			err = preVoteStreamingService.ResumeSession(coretypes.PreVoteStreamingSessionId(sessionIdStr), coretypes.PreVoteStreamingSessionKey(sessionKeyStr))
 			if err != nil {
 				utils.PrintlnStdErr("ERR: failed to resume streaming session id", sessionIdStr)
 				utils.PrintlnStdErr(err)
-				os.Exit(1)
+				aos.Exit(1)
 			}
 		} else {
 			fmt.Println("Registering streaming session...")
@@ -208,8 +210,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		broadcastingStatusChan = make(chan string)
 	}
 
-	exitCallback2 := func() {
-		exitCallback1()
+	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
 		close(renderVotingInfoChan)
 		if broadcastingPreVoteInfoChan != nil {
 			close(broadcastingPreVoteInfoChan)
@@ -217,10 +218,9 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		if broadcastingStatusChan != nil {
 			close(broadcastingStatusChan)
 		}
-	}
-	defer exitCallback2()
+	})
 
-	go drawScreen(chainId, consensusVersion, moniker, renderVotingInfoChan, broadcastingStatusChan, exitCallback2)
+	go drawScreen(chainId, consensusVersion, moniker, renderVotingInfoChan, broadcastingStatusChan)
 	if streamingMode {
 		go broadcastPreVoteInfo(preVoteStreamingService, broadcastingPreVoteInfoChan, broadcastingStatusChan)
 	}
@@ -266,7 +266,9 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 const terminalColumnsCount = 3
 
 // drawScreen render pre-vote information into screen.
-func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan interface{}, broadcastingStatusChan <-chan string, exitCallback func()) {
+func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan interface{}, broadcastingStatusChan <-chan string) {
+	defer utils.AppExitHelper.ExecuteFunctionsUponAppExit()
+	
 	if err := ui.Init(); err != nil {
 		//goland:noinspection SpellCheckingInspection
 		utils.PrintfStdErr("failed to initialize termui: %v\n", err)
@@ -321,6 +323,11 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 	)
 	ui.Render(grid)
 
+	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
+		ui.Clear()
+		ui.Close()
+	})
+
 	refresh := false
 	tick := time.NewTicker(100 * time.Millisecond)
 	uiEvents := ui.PollEvents()
@@ -338,12 +345,8 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 		case e := <-uiEvents:
 			switch e.ID {
 			case "q", "<C-c>":
-				ui.Clear()
-				ui.Close()
 
-				exitCallback()
-
-				os.Exit(0)
+				aos.Exit(0)
 			case "j", "<Down>":
 				for _, list := range lists {
 					if len(list.Rows) > 0 {
@@ -470,6 +473,8 @@ func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan
 }
 
 func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-chan interface{}, broadcastingStatusChan chan<- string) {
+	defer utils.AppExitHelper.ExecuteFunctionsUponAppExit()
+
 	for {
 		select {
 		case vi := <-votingInfoChan:
