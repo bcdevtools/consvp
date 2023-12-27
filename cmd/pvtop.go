@@ -141,9 +141,9 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		if strings.EqualFold(mockStreamingServer, "mock") {
 			preVoteStreamingService = mpvssi.NewMockLocalPreVoteStreamingService(chainId, 2*time.Minute)
 		} else if strings.EqualFold(mockStreamingServer, "local") {
-			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL_LOCAL)
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL_LOCAL, nil)
 		} else {
-			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL)
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL, nil)
 		}
 
 		if resumeStreaming {
@@ -268,7 +268,7 @@ const terminalColumnsCount = 3
 // drawScreen render pre-vote information into screen.
 func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan interface{}, broadcastingStatusChan <-chan string) {
 	defer utils.AppExitHelper.ExecuteFunctionsUponAppExit()
-	
+
 	if err := ui.Init(); err != nil {
 		//goland:noinspection SpellCheckingInspection
 		utils.PrintfStdErr("failed to initialize termui: %v\n", err)

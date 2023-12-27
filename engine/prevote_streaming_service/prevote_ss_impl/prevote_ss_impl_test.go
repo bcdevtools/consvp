@@ -31,7 +31,7 @@ func (suite *PreVoteStreamingServiceTestSuite) SetupSuite() {
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Refresh() {
-	suite.ss = NewPreVoteStreamingService("cosmoshub-4", coreconstants.STREAMING_BASE_URL_LOCAL).(*preVoteStreamingServiceImpl)
+	suite.ss = NewPreVoteStreamingService("cosmoshub-4", coreconstants.STREAMING_BASE_URL_LOCAL, nil).(*preVoteStreamingServiceImpl)
 
 	// use mock HTTP client for mocking response
 	suite.httpClient = &mockPreVotedStreamingHttpClientImpl{
