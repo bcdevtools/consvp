@@ -17,6 +17,7 @@ Templates:
 #### Features
 
 #### Improvements
+- (deps) [#41](https://github.com/bcdevtools/consvp/pull/41) Update deps cvp-streaming-core v1.1.0
 
 #### Bug Fixes
 
