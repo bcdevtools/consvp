@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/bcdevtools/consvp/aos"
 	"github.com/bcdevtools/consvp/constants"
+	corecodec "github.com/bcdevtools/cvp-streaming-core/codec"
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +28,7 @@ func Execute() {
 	rootCmd.Flags().Bool(flagHttp, false, "use http call for rpc client instead of default is websocket")
 	rootCmd.Flags().BoolP(flagRapidRefresh, "r", false, fmt.Sprintf("refresh rate quicker, default is %v will be changed to %v", defaultRefreshInterval, rapidRefreshInterval))
 	rootCmd.Flags().BoolP(flagStreaming, "s", false, "open a live-streaming pre-vote session to be able to share the view with others.")
+	rootCmd.Flags().String(flagCodec, string(corecodec.NewProxyCvpCodec().GetVersion()), "specify codec version to be used to encode the streaming data, mostly used for testing purpose or workaround when the default codec version has bug.")
 	rootCmd.Flags().Bool(flagResumeStreaming, false, "resume an opened live-streaming pre-vote session to keep the current shared URL.")
 	rootCmd.Flags().StringP(flagMockStreamingServer, "t", "none", "for testing purpose only, mock a streaming server or connect to local streaming server to test the streaming client.")
 

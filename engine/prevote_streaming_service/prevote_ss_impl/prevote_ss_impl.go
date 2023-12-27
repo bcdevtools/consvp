@@ -37,11 +37,18 @@ type preVoteStreamingServiceImpl struct {
 }
 
 // NewPreVoteStreamingService creates a new PreVoteStreamingService.
-func NewPreVoteStreamingService(chainId string, upstreamServerUrl string) ss.PreVoteStreamingService {
+func NewPreVoteStreamingService(chainId string, upstreamServerUrl string, optionalCodec corecodec.CvpCodec) ss.PreVoteStreamingService {
+	var codec corecodec.CvpCodec
+	if optionalCodec != nil {
+		codec = optionalCodec
+	} else {
+		codec = corecodec.NewProxyCvpCodec()
+	}
+
 	return &preVoteStreamingServiceImpl{
 		chainId: chainId,
 
-		codec: corecodec.NewProxyCvpCodec(),
+		codec: codec,
 
 		httpClient: &preVotedStreamingHttpClientImpl{
 			baseUrl: upstreamServerUrl,
