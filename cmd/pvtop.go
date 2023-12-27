@@ -15,6 +15,7 @@ import (
 	drpci "github.com/bcdevtools/consvp/engine/rpc_client/default_rpc_impl"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
 	"github.com/bcdevtools/consvp/utils"
+	corecodec "github.com/bcdevtools/cvp-streaming-core/codec"
 	coreconstants "github.com/bcdevtools/cvp-streaming-core/constants"
 	coretypes "github.com/bcdevtools/cvp-streaming-core/types"
 	coreutils "github.com/bcdevtools/cvp-streaming-core/utils"
@@ -36,6 +37,7 @@ const (
 	flagStreaming           = "streaming"
 	flagResumeStreaming     = "resume-streaming"
 	flagMockStreamingServer = "mock-streaming-server"
+	flagCodec               = "codec"
 )
 
 const defaultRefreshInterval = 3 * time.Second
@@ -69,9 +71,12 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		aos.Exit(1)
 	}
 
+	var codec corecodec.CvpCodec
+
 	useHttp := cmd.Flags().Changed(flagHttp)
 	streamingMode := cmd.Flags().Changed(flagStreaming)
 	resumeStreaming := cmd.Flags().Changed(flagResumeStreaming)
+	codecVersion, _ := cmd.Flags().GetString(flagCodec)
 	if resumeStreaming {
 		streamingMode = true
 	}
@@ -84,6 +89,24 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		// valid
 	} else {
 		utils.PrintlnStdErr("ERR: bad mock streaming server value:", mockStreamingServer)
+		aos.Exit(1)
+	}
+	switch strings.ToLower(codecVersion) {
+	case "":
+		codec = nil
+		break
+	case string(corecodec.CvpCodecVersionV1):
+		//goland:noinspection GoDeprecation
+		codec = corecodec.GetCvpCodecV1()
+		break
+	case string(corecodec.CvpCodecVersionV2):
+		codec = corecodec.GetCvpCodecV2()
+		break
+	case string(corecodec.CvpCodecVersionV3):
+		codec = corecodec.GetCvpCodecV3()
+		break
+	default:
+		utils.PrintlnStdErr("ERR: bad codec version:", codecVersion)
 		aos.Exit(1)
 	}
 
@@ -141,9 +164,9 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		if strings.EqualFold(mockStreamingServer, "mock") {
 			preVoteStreamingService = mpvssi.NewMockLocalPreVoteStreamingService(chainId, 2*time.Minute)
 		} else if strings.EqualFold(mockStreamingServer, "local") {
-			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL_LOCAL, nil)
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL_LOCAL, codec)
 		} else {
-			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL, nil)
+			preVoteStreamingService = pvssi.NewPreVoteStreamingService(chainId, coreconstants.STREAMING_BASE_URL, codec)
 		}
 
 		if resumeStreaming {
