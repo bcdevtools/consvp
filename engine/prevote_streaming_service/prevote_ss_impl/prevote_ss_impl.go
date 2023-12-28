@@ -235,6 +235,8 @@ func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, action
 		return fmt.Errorf("mis-match session key")
 	} else if resp.StatusCode == http.StatusUnsupportedMediaType { // 415
 		return fmt.Errorf("deprecated codec version or unsupported content type")
+	} else if resp.StatusCode == http.StatusUpgradeRequired { // 426
+		return fmt.Errorf("'%s' binary upgrade is required", constants.BINARY_NAME)
 	} else if resp.StatusCode == http.StatusTooManyRequests { // 429
 		return fmt.Errorf("slow down")
 	} else if resp.StatusCode == http.StatusInternalServerError { // 500
@@ -244,8 +246,6 @@ func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, action
 		return fmt.Errorf("upstream server unavailable")
 	} else if resp.StatusCode == http.StatusGatewayTimeout { // 504
 		return fmt.Errorf("timed out connecting to upstream server")
-	} else if resp.StatusCode == http.StatusUpgradeRequired { // 426
-		return fmt.Errorf("'%s' binary upgrade is required", constants.BINARY_NAME)
 	} else {
 		return errors.Errorf("failed to [%s], server returned status code: %d", actionName, resp.StatusCode)
 	}
