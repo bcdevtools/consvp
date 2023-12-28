@@ -549,10 +549,13 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 			}
 
 			if err != nil {
-				if strings.Contains(err.Error(), "upstream status has not changed") {
+				errMsg := err.Error()
+				if strings.Contains(errMsg, "upstream status has not changed") {
 					broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress, no change"
+				} else if strings.Contains(errMsg, "connection refused") {
+					broadcastingStatusChan <- "❗Broadcasting err: upstream server unavailable"
 				} else {
-					broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed: %s", err)
+					broadcastingStatusChan <- fmt.Sprintf("❗Broadcasting err: %s", err)
 				}
 				continue
 			}
