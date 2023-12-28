@@ -674,6 +674,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 			wantErrContains: "session timed out",
 		},
 		{
+			statusCode:      http.StatusForbidden,
+			wantErrContains: "mis-match session key",
+		},
+		{
 			statusCode:      http.StatusUnsupportedMediaType,
 			wantErrContains: "deprecated codec version or unsupported content type",
 		},
