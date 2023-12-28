@@ -20,6 +20,7 @@ Templates:
 - (deps) [#41](https://github.com/bcdevtools/consvp/pull/41) Update deps cvp-streaming-core v1.1.0
 - (codec) [#42](https://github.com/bcdevtools/consvp/pull/42) Add new flag `--codec` to specify codec for streaming
 - (errors) [#43](https://github.com/bcdevtools/consvp/pull/43) Queue message and print after T-UI closed to prevent message lost & improve error message content
+- (errors) [#44](https://github.com/bcdevtools/consvp/pull/44) Minimize error message content
 
 #### Bug Fixes
 
