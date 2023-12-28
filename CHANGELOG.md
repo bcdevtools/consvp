@@ -21,6 +21,7 @@ Templates:
 - (codec) [#42](https://github.com/bcdevtools/consvp/pull/42) Add new flag `--codec` to specify codec for streaming
 - (errors) [#43](https://github.com/bcdevtools/consvp/pull/43) Queue message and print after T-UI closed to prevent message lost & improve error message content
 - (errors) [#44](https://github.com/bcdevtools/consvp/pull/44) Minimize error message content
+- (broadcast) [#45](https://github.com/bcdevtools/consvp/pull/45) Stop app when broadcast failed with response http status 404
 
 #### Bug Fixes
 
