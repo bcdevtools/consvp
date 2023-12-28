@@ -194,9 +194,6 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 		case http.StatusNotModified:
 			shouldStop = false
 			break
-		case http.StatusNotFound:
-			shouldStop = false
-			break
 		case http.StatusTooManyRequests: // rate limit
 			shouldStop = false
 			break
