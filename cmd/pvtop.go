@@ -120,6 +120,11 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		utils.StdHelper.PrintQueuedMessages()
 	})
 
+	var shouldExit bool
+	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
+		shouldExit = true
+	})
+
 	var rpcClient rpc_client.RpcClient
 	var consensusService conss.ConsensusService
 	var preVoteStreamingService pvss.PreVoteStreamingService
@@ -229,6 +234,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	isStoppedAcceptingNextBlockVotingInfo := false
 	renderVotingInfoChan := make(chan interface{}) // accept both voting info and error
 	var broadcastingPreVoteInfoChan chan interface{}
 	var broadcastingStatusChan chan string
@@ -238,6 +244,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	}
 
 	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
+		isStoppedAcceptingNextBlockVotingInfo = true
 		close(renderVotingInfoChan)
 		if broadcastingPreVoteInfoChan != nil {
 			close(broadcastingPreVoteInfoChan)
@@ -260,6 +267,11 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	}())
 
 	for range refreshTicker.C {
+		if shouldExit {
+			refreshTicker.Stop()
+			break
+		}
+
 		if len(lightValidators) < 1 {
 			lightValidators, err = rpcClient.LightValidators()
 			if err != nil {
@@ -280,6 +292,10 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 
 		if newUpdateContent != nil {
+			if isStoppedAcceptingNextBlockVotingInfo {
+				continue
+			}
+
 			renderVotingInfoChan <- newUpdateContent
 			if streamingMode {
 				if !preVoteStreamingService.IsStopped() { // prevent memory stacking due to no consumer
