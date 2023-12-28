@@ -17,16 +17,22 @@ Templates:
 #### Features
 
 #### Improvements
-- (deps) [#41](https://github.com/bcdevtools/consvp/pull/41) Update deps cvp-streaming-core v1.1.0
-- (codec) [#42](https://github.com/bcdevtools/consvp/pull/42) Add new flag `--codec` to specify codec for streaming
-- (errors) [#43](https://github.com/bcdevtools/consvp/pull/43) Queue message and print after T-UI closed to prevent message lost & improve error message content
-- (errors) [#44](https://github.com/bcdevtools/consvp/pull/44) Minimize error message content
-- (broadcast) [#45](https://github.com/bcdevtools/consvp/pull/45) Stop app when broadcast failed with response http status 404
-- (deps) [#46](https://github.com/bcdevtools/consvp/pull/46) Update deps cvp-streaming-core v1.1.1
 
 #### Bug Fixes
 
 #### Breaking changes
+
+## Release v1.1.0
+
+#### Improvements
+- (codec) [#42](https://github.com/bcdevtools/consvp/pull/42) Add new flag `--codec` to specify codec for streaming
+- (errors) [#43](https://github.com/bcdevtools/consvp/pull/43) Queue message and print after T-UI closed to prevent message lost & improve error message content
+- (errors) [#44](https://github.com/bcdevtools/consvp/pull/44) Minimize error message content
+
+#### Breaking changes
+- (deps) [#41](https://github.com/bcdevtools/consvp/pull/41) Update deps cvp-streaming-core v1.1.0
+- (broadcast) [#45](https://github.com/bcdevtools/consvp/pull/45) Stop app when broadcast failed with response http status 404
+- (deps) [#46](https://github.com/bcdevtools/consvp/pull/46) Update deps cvp-streaming-core v1.1.1
 
 ## Release v1.0.3
 
