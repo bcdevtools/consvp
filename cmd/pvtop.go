@@ -221,7 +221,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 			fmt.Println("Streaming session registered successfully")
 			fmt.Println("use the following session ID and key to resume streaming the session if needed:")
 			sessionId, sessionKey := preVoteStreamingService.ExposeSessionIdAndKey()
-			fmt.Println("Session ID:", sessionId)
+			fmt.Println("Session ID :", sessionId)
 			fmt.Println("Session Key:", sessionKey)
 
 			fmt.Println("*** Share the following URL to others to join:")
