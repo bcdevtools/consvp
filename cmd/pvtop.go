@@ -116,6 +116,10 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
+		utils.TbpMessages.PrintQueuedMessages()
+	})
+
 	var rpcClient rpc_client.RpcClient
 	var consensusService conss.ConsensusService
 	var preVoteStreamingService pvss.PreVoteStreamingService
@@ -503,7 +507,7 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 		case vi := <-votingInfoChan:
 			if vi == nil {
 				// TODO: investigate why this happens while channel is not closed
-				// utils.PrintlnStdErr("ERR: un-expected nil voting info")
+				// utils.TbpMessages.AddMessage("ERR: un-expected nil voting info", true)
 				continue
 			}
 
@@ -518,8 +522,10 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 			if shouldStop {
 				if err == nil {
 					broadcastingStatusChan <- "🔴 Broadcasting stopped"
+					utils.TbpMessages.AddMessage("ERR: broadcasting stopped", true)
 				} else {
 					broadcastingStatusChan <- fmt.Sprintf("🔴 Broadcasting stopped: %s", err)
+					utils.TbpMessages.AddMessage("ERR: broadcasting stopped, reason: "+err.Error(), true)
 				}
 				pvs.Stop()
 				return
@@ -529,7 +535,7 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 				if strings.Contains(err.Error(), "upstream status has not changed") {
 					broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress, no change"
 				} else {
-					broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed with reason: %s", err)
+					broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed: %s", err)
 				}
 				continue
 			}
