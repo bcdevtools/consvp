@@ -1002,6 +1002,7 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		},
 		{
 			statusCode: http.StatusNotFound,
+			shouldStop: true,
 		},
 		{
 			statusCode: http.StatusForbidden,
