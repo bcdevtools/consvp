@@ -368,19 +368,19 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 	}{
 		{
 			statusCode:      http.StatusBadRequest,
-			wantErrContains: "invalid request, probably due to server side deprecated this [register pre-vote streaming session] version",
+			wantErrContains: "bad request",
 		},
 		{
 			statusCode:      http.StatusUnauthorized,
-			wantErrContains: "unauthorized, probably session timed out",
-		},
-		{
-			statusCode:      http.StatusForbidden,
-			wantErrContains: "forbidden, probably mis-match session key",
+			wantErrContains: "session timed out",
 		},
 		{
 			statusCode:      http.StatusUnsupportedMediaType,
-			wantErrContains: "malformed format or deprecated codec version",
+			wantErrContains: "deprecated codec version or unsupported content type",
+		},
+		{
+			statusCode:      http.StatusUpgradeRequired,
+			wantErrContains: "binary upgrade is required",
 		},
 		{
 			statusCode:      http.StatusTooManyRequests,
@@ -392,19 +392,15 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 		},
 		{
 			statusCode:      http.StatusBadGateway,
-			wantErrContains: "upstream streaming server is currently unavailable",
+			wantErrContains: "upstream server unavailable",
 		},
 		{
 			statusCode:      http.StatusServiceUnavailable,
-			wantErrContains: "upstream streaming server is currently unavailable",
+			wantErrContains: "upstream server unavailable",
 		},
 		{
 			statusCode:      http.StatusGatewayTimeout,
-			wantErrContains: "timed out connecting to upstream streaming server",
-		},
-		{
-			statusCode:      http.StatusUpgradeRequired,
-			wantErrContains: "binary upgrade is required, probably due to server side changed [register pre-vote streaming session] behaviors and conditions",
+			wantErrContains: "timed out connecting to upstream server",
 		},
 	}
 	for _, tt := range testsPrettyErrMsg {
@@ -671,19 +667,23 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 	}{
 		{
 			statusCode:      http.StatusBadRequest,
-			wantErrContains: "invalid request, probably due to server side deprecated this [resume pre-vote streaming session] version",
+			wantErrContains: "bad request",
 		},
 		{
 			statusCode:      http.StatusUnauthorized,
-			wantErrContains: "unauthorized, probably session timed out",
+			wantErrContains: "session timed out",
 		},
 		{
 			statusCode:      http.StatusForbidden,
-			wantErrContains: "forbidden, probably mis-match session key",
+			wantErrContains: "mis-match session key",
 		},
 		{
 			statusCode:      http.StatusUnsupportedMediaType,
-			wantErrContains: "malformed format or deprecated codec version",
+			wantErrContains: "deprecated codec version or unsupported content type",
+		},
+		{
+			statusCode:      http.StatusUpgradeRequired,
+			wantErrContains: "binary upgrade is required",
 		},
 		{
 			statusCode:      http.StatusTooManyRequests,
@@ -695,19 +695,15 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 		},
 		{
 			statusCode:      http.StatusBadGateway,
-			wantErrContains: "upstream streaming server is currently unavailable",
+			wantErrContains: "upstream server unavailable",
 		},
 		{
 			statusCode:      http.StatusServiceUnavailable,
-			wantErrContains: "upstream streaming server is currently unavailable",
+			wantErrContains: "upstream server unavailable",
 		},
 		{
 			statusCode:      http.StatusGatewayTimeout,
-			wantErrContains: "timed out connecting to upstream streaming server",
-		},
-		{
-			statusCode:      http.StatusUpgradeRequired,
-			wantErrContains: "binary upgrade is required, probably due to server side changed [resume pre-vote streaming session] behaviors and conditions",
+			wantErrContains: "timed out connecting to upstream server",
 		},
 	}
 	for _, tt := range testsPrettyErrMsg {
@@ -930,19 +926,23 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		},
 		{
 			statusCode:      http.StatusBadRequest,
-			wantErrContains: "invalid request, probably due to server side deprecated this [broadcast pre-vote] version",
+			wantErrContains: "bad request",
 		},
 		{
 			statusCode:      http.StatusUnauthorized,
-			wantErrContains: "unauthorized, probably session timed out",
+			wantErrContains: "session timed out",
 		},
 		{
 			statusCode:      http.StatusNotFound,
-			wantErrContains: "session not found, probably due to upstream server restarted, please create a new streaming session",
+			wantErrContains: "session not found, please start a new streaming session",
 		},
 		{
 			statusCode:      http.StatusUnsupportedMediaType,
-			wantErrContains: "malformed format or deprecated codec version",
+			wantErrContains: "deprecated codec version or unsupported content type",
+		},
+		{
+			statusCode:      http.StatusUpgradeRequired,
+			wantErrContains: "binary upgrade is required",
 		},
 		{
 			statusCode:      http.StatusTooManyRequests,
@@ -954,19 +954,15 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		},
 		{
 			statusCode:      http.StatusBadGateway,
-			wantErrContains: "upstream streaming server is currently unavailable",
+			wantErrContains: "upstream server unavailable",
 		},
 		{
 			statusCode:      http.StatusServiceUnavailable,
-			wantErrContains: "upstream streaming server is currently unavailable",
+			wantErrContains: "upstream server unavailable",
 		},
 		{
 			statusCode:      http.StatusGatewayTimeout,
-			wantErrContains: "timed out connecting to upstream streaming server",
-		},
-		{
-			statusCode:      http.StatusUpgradeRequired,
-			wantErrContains: "binary upgrade is required, probably due to server side changed [broadcast pre-vote] behaviors and conditions",
+			wantErrContains: "timed out connecting to upstream server",
 		},
 	}
 	for _, tt := range testsPrettyErrMsg {
@@ -1006,7 +1002,6 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		},
 		{
 			statusCode: http.StatusNotFound,
-			shouldStop: false,
 		},
 		{
 			statusCode: http.StatusForbidden,

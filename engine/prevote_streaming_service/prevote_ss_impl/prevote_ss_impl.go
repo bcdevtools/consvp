@@ -183,7 +183,7 @@ func (s *preVoteStreamingServiceImpl) BroadcastPreVote(information *enginetypes.
 	if resp.StatusCode == http.StatusNotModified {
 		err = fmt.Errorf("upstream status has not changed, probably due to duplicated or outdated content")
 	} else if resp.StatusCode == http.StatusNotFound {
-		err = fmt.Errorf("session not found, probably due to upstream server restarted, please create a new streaming session")
+		err = fmt.Errorf("session not found, please start a new streaming session")
 	} else {
 		err = genericHandleStatusCode(resp, http.StatusOK, "broadcast pre-vote")
 	}
@@ -228,24 +228,24 @@ func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, action
 	if resp.StatusCode == acceptedStatusCode {
 		return nil
 	} else if resp.StatusCode == http.StatusBadRequest { // 400
-		return fmt.Errorf("invalid request, probably due to server side deprecated this [%s] version, recommend to upgrade '%s'", actionName, constants.BINARY_NAME)
+		return fmt.Errorf("bad request")
 	} else if resp.StatusCode == http.StatusUnauthorized { // 401
-		return fmt.Errorf("unauthorized, probably session timed out")
+		return fmt.Errorf("session timed out")
 	} else if resp.StatusCode == http.StatusForbidden { // 403
-		return fmt.Errorf("forbidden, probably mis-match session key")
+		return fmt.Errorf("mis-match session key")
 	} else if resp.StatusCode == http.StatusUnsupportedMediaType { // 415
-		return fmt.Errorf("bad request, malformed format or deprecated codec version")
+		return fmt.Errorf("deprecated codec version or unsupported content type")
+	} else if resp.StatusCode == http.StatusUpgradeRequired { // 426
+		return fmt.Errorf("'%s' binary upgrade is required", constants.BINARY_NAME)
 	} else if resp.StatusCode == http.StatusTooManyRequests { // 429
 		return fmt.Errorf("slow down")
 	} else if resp.StatusCode == http.StatusInternalServerError { // 500
-		return fmt.Errorf("internal server issue, please try again later")
+		return fmt.Errorf("internal server issue")
 	} else if resp.StatusCode == http.StatusBadGateway || // 502
 		resp.StatusCode == http.StatusServiceUnavailable { // 503
-		return fmt.Errorf("upstream streaming server is currently unavailable, please try again later")
+		return fmt.Errorf("upstream server unavailable")
 	} else if resp.StatusCode == http.StatusGatewayTimeout { // 504
-		return fmt.Errorf("timed out connecting to upstream streaming server, please try again")
-	} else if resp.StatusCode == http.StatusUpgradeRequired { // 426
-		return fmt.Errorf("'%s' binary upgrade is required, probably due to server side changed [%s] behaviors and conditions", constants.BINARY_NAME, actionName)
+		return fmt.Errorf("timed out connecting to upstream server")
 	} else {
 		return errors.Errorf("failed to [%s], server returned status code: %d", actionName, resp.StatusCode)
 	}
