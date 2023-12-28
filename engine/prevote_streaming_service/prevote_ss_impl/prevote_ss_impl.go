@@ -233,6 +233,8 @@ func genericHandleStatusCode(resp *http.Response, acceptedStatusCode int, action
 		return fmt.Errorf("unauthorized, probably session timed out")
 	} else if resp.StatusCode == http.StatusForbidden { // 403
 		return fmt.Errorf("forbidden, probably mis-match session key")
+	} else if resp.StatusCode == http.StatusUnsupportedMediaType { // 415
+		return fmt.Errorf("bad request, malformed format or deprecated codec version")
 	} else if resp.StatusCode == http.StatusTooManyRequests { // 429
 		return fmt.Errorf("slow down")
 	} else if resp.StatusCode == http.StatusInternalServerError { // 500

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	enginetypes "github.com/bcdevtools/consvp/engine/types"
+	corecodec "github.com/bcdevtools/cvp-streaming-core/codec"
 	coreconstants "github.com/bcdevtools/cvp-streaming-core/constants"
 	coretypes "github.com/bcdevtools/cvp-streaming-core/types"
 	coreutils "github.com/bcdevtools/cvp-streaming-core/utils"
@@ -46,6 +47,18 @@ func (suite *PreVoteStreamingServiceTestSuite) RandomSession() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (suite *PreVoteStreamingServiceTestSuite) Test_InitDefault() {
+	ssWithDefaultCodec := NewPreVoteStreamingService("cosmoshub-4", coreconstants.STREAMING_BASE_URL_LOCAL, nil).(*preVoteStreamingServiceImpl)
+	codecUsedByDefault := ssWithDefaultCodec.codec.GetVersion()
+
+	//goland:noinspection GoDeprecation
+	ssWithV1Codec := NewPreVoteStreamingService("cosmoshub-4", coreconstants.STREAMING_BASE_URL_LOCAL, corecodec.GetCvpCodecV1()).(*preVoteStreamingServiceImpl)
+	v1CodecVersion := ssWithV1Codec.codec.GetVersion()
+
+	suite.NotEqual(v1CodecVersion, codecUsedByDefault)
+	suite.Equal(corecodec.NewProxyCvpCodec().GetVersion(), codecUsedByDefault)
 }
 
 func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
@@ -366,6 +379,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_OpenSession() {
 			wantErrContains: "forbidden, probably mis-match session key",
 		},
 		{
+			statusCode:      http.StatusUnsupportedMediaType,
+			wantErrContains: "malformed format or deprecated codec version",
+		},
+		{
 			statusCode:      http.StatusTooManyRequests,
 			wantErrContains: "slow down",
 		},
@@ -665,6 +682,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_ResumeSession() {
 			wantErrContains: "forbidden, probably mis-match session key",
 		},
 		{
+			statusCode:      http.StatusUnsupportedMediaType,
+			wantErrContains: "malformed format or deprecated codec version",
+		},
+		{
 			statusCode:      http.StatusTooManyRequests,
 			wantErrContains: "slow down",
 		},
@@ -920,6 +941,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 			wantErrContains: "session not found, probably due to upstream server restarted, please create a new streaming session",
 		},
 		{
+			statusCode:      http.StatusUnsupportedMediaType,
+			wantErrContains: "malformed format or deprecated codec version",
+		},
+		{
 			statusCode:      http.StatusTooManyRequests,
 			wantErrContains: "slow down",
 		},
@@ -985,6 +1010,10 @@ func (suite *PreVoteStreamingServiceTestSuite) Test_BroadcastPreVote() {
 		},
 		{
 			statusCode: http.StatusForbidden,
+			shouldStop: true,
+		},
+		{
+			statusCode: http.StatusUnsupportedMediaType,
 			shouldStop: true,
 		},
 		{

@@ -88,7 +88,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	} else if strings.EqualFold(mockStreamingServer, "local") {
 		// valid
 	} else {
-		utils.PrintlnStdErr("ERR: bad mock streaming server value:", mockStreamingServer)
+		utils.PrintlnStdErr("ERR: bad mock streaming server value: " + mockStreamingServer)
 		aos.Exit(1)
 	}
 	switch strings.ToLower(codecVersion) {
@@ -106,7 +106,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		codec = corecodec.GetCvpCodecV3()
 		break
 	default:
-		utils.PrintlnStdErr("ERR: bad codec version:", codecVersion)
+		utils.PrintlnStdErr("ERR: bad codec version: " + codecVersion)
 		aos.Exit(1)
 	}
 
@@ -115,6 +115,15 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 			panic(fmt.Errorf("cannot mock streaming server if not in streaming mode, requires --%s or --%s", flagStreaming, flagResumeStreaming))
 		}
 	}
+
+	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
+		utils.StdHelper.PrintQueuedMessages()
+	})
+
+	var shouldExit bool
+	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
+		shouldExit = true
+	})
 
 	var rpcClient rpc_client.RpcClient
 	var consensusService conss.ConsensusService
@@ -156,7 +165,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 
 		if len(lightValidators) > coreconstants.MAX_VALIDATORS {
-			utils.PrintfStdErr("ERR: too many validators %d/%d, cannot start streaming session\n", len(lightValidators), coreconstants.MAX_VALIDATORS)
+			utils.PrintlnStdErr(fmt.Sprintf("ERR: too many validators %d/%d, cannot start streaming session\n", len(lightValidators), coreconstants.MAX_VALIDATORS))
 			aos.Exit(1)
 		}
 
@@ -186,13 +195,13 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 			}, "bad session ID, please check")
 
 			if !strings.HasPrefix(sessionIdStr, chainId) {
-				utils.PrintlnStdErr("ERR: supplied session ID is not for chain", chainId)
+				utils.PrintlnStdErr("ERR: supplied session ID is not for chain " + chainId)
 				aos.Exit(1)
 			}
 
 			err = preVoteStreamingService.ResumeSession(coretypes.PreVoteStreamingSessionId(sessionIdStr), coretypes.PreVoteStreamingSessionKey(sessionKeyStr))
 			if err != nil {
-				utils.PrintlnStdErr("ERR: failed to resume streaming session id", sessionIdStr)
+				utils.PrintlnStdErr("ERR: failed to resume streaming session id " + sessionIdStr)
 				utils.PrintlnStdErr(err)
 				aos.Exit(1)
 			}
@@ -225,6 +234,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	isStoppedAcceptingNextBlockVotingInfo := false
 	renderVotingInfoChan := make(chan interface{}) // accept both voting info and error
 	var broadcastingPreVoteInfoChan chan interface{}
 	var broadcastingStatusChan chan string
@@ -234,6 +244,7 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	}
 
 	utils.AppExitHelper.RegisterFuncUponAppExit(func() {
+		isStoppedAcceptingNextBlockVotingInfo = true
 		close(renderVotingInfoChan)
 		if broadcastingPreVoteInfoChan != nil {
 			close(broadcastingPreVoteInfoChan)
@@ -256,11 +267,16 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 	}())
 
 	for range refreshTicker.C {
+		if shouldExit {
+			refreshTicker.Stop()
+			break
+		}
+
 		if len(lightValidators) < 1 {
 			lightValidators, err = rpcClient.LightValidators()
 			if err != nil {
-				utils.PrintlnStdErr("ERR: failed to fetch light validators")
-				utils.PrintlnStdErr(err)
+				utils.StdHelper.PrintlnStdErr("ERR: failed to fetch light validators")
+				utils.StdHelper.PrintlnStdErr(err)
 				continue
 			}
 		}
@@ -276,6 +292,10 @@ func pvtopHandler(cmd *cobra.Command, args []string) {
 		}
 
 		if newUpdateContent != nil {
+			if isStoppedAcceptingNextBlockVotingInfo {
+				continue
+			}
+
 			renderVotingInfoChan <- newUpdateContent
 			if streamingMode {
 				if !preVoteStreamingService.IsStopped() { // prevent memory stacking due to no consumer
@@ -292,9 +312,10 @@ const terminalColumnsCount = 3
 func drawScreen(chainId, consensusVersion, moniker string, votingInfoChan <-chan interface{}, broadcastingStatusChan <-chan string) {
 	defer utils.AppExitHelper.ExecuteFunctionsUponAppExit()
 
+	utils.StdHelper.EnableQueue()
 	if err := ui.Init(); err != nil {
 		//goland:noinspection SpellCheckingInspection
-		utils.PrintfStdErr("failed to initialize termui: %v\n", err)
+		utils.StdHelper.PrintlnStdErr(fmt.Sprintf("failed to initialize termui: %v\n", err))
 	}
 
 	pSummary := widgets.NewParagraph()
@@ -503,7 +524,7 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 		case vi := <-votingInfoChan:
 			if vi == nil {
 				// TODO: investigate why this happens while channel is not closed
-				// utils.PrintlnStdErr("ERR: un-expected nil voting info")
+				// utils.TbpMessages.AddMessage("ERR: un-expected nil voting info", true)
 				continue
 			}
 
@@ -518,8 +539,10 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 			if shouldStop {
 				if err == nil {
 					broadcastingStatusChan <- "🔴 Broadcasting stopped"
+					utils.StdHelper.PrintlnStdErr("ERR: broadcasting stopped")
 				} else {
 					broadcastingStatusChan <- fmt.Sprintf("🔴 Broadcasting stopped: %s", err)
+					utils.StdHelper.PrintlnStdErr("ERR: broadcasting stopped, reason: " + err.Error())
 				}
 				pvs.Stop()
 				return
@@ -529,7 +552,7 @@ func broadcastPreVoteInfo(pvs pvss.PreVoteStreamingService, votingInfoChan <-cha
 				if strings.Contains(err.Error(), "upstream status has not changed") {
 					broadcastingStatusChan <- "🟢 Pre-Vote streaming in progress, no change"
 				} else {
-					broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed with reason: %s", err)
+					broadcastingStatusChan <- fmt.Sprintf("❗️Last broadcasting failed: %s", err)
 				}
 				continue
 			}
@@ -588,8 +611,8 @@ func readUntilValid(reader *bufio.Reader, question string, validateFn func(t str
 
 		err := validateFn(line)
 		if err != nil {
-			utils.PrintfStdErr("ERR: %s\n", malformedErrMsg)
-			utils.PrintlnStdErr(err)
+			utils.StdHelper.PrintlnStdErr("ERR: " + malformedErrMsg)
+			utils.StdHelper.PrintlnStdErr(err)
 			fmt.Println("----")
 			continue
 		}
